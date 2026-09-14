@@ -62,7 +62,8 @@ if [[ -z "${LEZ_ESCROW_PROGRAM_ID:-}" && -f ../scripts/verify-lez-v02-provisiona
 fi
 [[ "${LEZ_ESCROW_PROGRAM_ID:-}" =~ ^[0-9a-f]{64}$ ]] || fail "LEZ_ESCROW_PROGRAM_ID must name the pinned escrow program"
 export LEZ_IMAGE_PREFIX LEZ_IMAGE_TAG LEZ_ESCROW_PROGRAM_ID
-export LEZ_IMAGES=pull
+# Images tagged `local` are a developer's own build: use them as they are.
+if [[ "$LEZ_IMAGE_TAG" == local ]]; then export LEZ_IMAGES=present; else export LEZ_IMAGES=pull; fi
 
 # ---- market root: wallet identities + the escrow deployment manifest -------------
 export LEZ_MARKET_ROOT="${LEZ_MARKET_ROOT:-$DEPLOY_ROOT/market}"
@@ -77,8 +78,12 @@ export BTC_RPC_PASSWORD="${BTC_RPC_PASSWORD:-pending}"
 # one throwaway container of the tools image on the stack network
 tools() { docker compose --profile tools run --rm --no-deps --quiet-pull tools "$*"; }
 
-log "pulling ${LEZ_IMAGE_PREFIX}-tools:${LEZ_IMAGE_TAG}"
-docker compose --profile tools pull --quiet tools
+if [[ "$LEZ_IMAGES" == present ]]; then
+  docker image inspect "${LEZ_IMAGE_PREFIX}-tools:${LEZ_IMAGE_TAG}" >/dev/null 2>&1 || fail "${LEZ_IMAGE_PREFIX}-tools:${LEZ_IMAGE_TAG} is not present locally"
+else
+  log "pulling ${LEZ_IMAGE_PREFIX}-tools:${LEZ_IMAGE_TAG}"
+  docker compose --profile tools pull --quiet tools
+fi
 for wallet in maker-munich-01 maker-basel-02 taker-zurich-01 taker-limmat-02; do
   [[ -f "$LEZ_WALLET_IDENTITIES/$wallet/identity.json" ]] && continue
   log "minting the $wallet identity"
