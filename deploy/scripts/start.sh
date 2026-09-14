@@ -108,12 +108,32 @@ tools 'socat TCP-LISTEN:3040,bind=127.0.0.1,fork,reuseaddr TCP:sequencer:3040 &
 cat "$LEZ_MARKET_ROOT/market-bootstrap.env" > runtime/market-bootstrap.env
 chmod 0644 runtime/market-bootstrap.env
 docker compose up -d --no-deps --force-recreate --wait --wait-timeout 180 maker-node taker-node
+# A recreated Node reports its container healthy before its owner socket
+# serves, and it reports itself degraded until Delivery and Chat are back; the
+# desk suites press "Check Node" once and expect "Node ready". Wait for both
+# Nodes to answer their owner health call ready and not degraded (a slow
+# runner took longer than the desk's budget on the v0.2.2 release smoke).
+wait_nodes_ready() { # wait_nodes_ready <seconds>
+  local deadline=$(( $(date +%s) + $1 ))
+  node_ready() { # node_ready <role> <method> <params>
+    docker exec "lez-$1-node" curl -sS --max-time 5 --unix-socket "/run/lez/$1/node.sock" \
+      -H 'content-type: application/json' \
+      --data "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"$2\",\"params\":[$3]}" http://localhost/ 2>/dev/null |
+      python3 -c 'import json,sys; r=json.load(sys.stdin).get("result",{}); sys.exit(0 if r.get("ready") is True and r.get("degraded") is not True else 1)' 2>/dev/null
+  }
+  until node_ready maker maker_health '{}' && node_ready taker taker_health '{"schema_version":1}'; do
+    (( $(date +%s) < deadline )) || fail "the Nodes did not report ready within $1 s after their restart"
+    sleep 3
+  done
+}
+log "waiting for both Nodes to report ready"
+wait_nodes_ready 300
 
 # ---- verification --------------------------------------------------------------------
 if [[ "$QUICK" != 1 ]]; then
   log "Basecamp suites against both Nodes (the Maker suite also seeds the order book)"
   for role in maker taker; do
-    docker exec lez-basecamp-ui node /ui-tests/verify.mjs "$role" 2>&1 | grep -E '✓|✗|passed' || fail "$role UI suite failed"
+    docker exec lez-basecamp-ui node /ui-tests/verify.mjs "$role" 2>&1 | grep -E '✓|✗|passed|^    [A-Za-z]' || fail "$role UI suite failed"
   done
   bash scripts/verify-all.sh 2>&1 | grep -E 'OK|FAIL|checks|failed' || fail "verify-all.sh reported a failed stage"
 fi
