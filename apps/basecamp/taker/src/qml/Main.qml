@@ -167,6 +167,10 @@ Item {
                 try {
                     if (!silent) root.output = String(value)
                     root.applyBtcMarket(root.decode(value))
+                    if (silent && root.statusTitle === "Node connected") {
+                        root.statusTitle = "Market loaded"
+                        root.statusDetail = (root.btcMarket.swaps ?? []).length + " swaps · " + Number((root.btcMarket.summary ?? {}).pending_offers ?? 0) + " open offers"
+                    }
                     if (!silent) {
                         root.statusMode = "success"
                         root.statusTitle = "Market refreshed"
@@ -409,11 +413,15 @@ Item {
 
     TextEdit { id: clipboardHelper; visible: false }
 
+    // The first market load after connecting is silent: it fills the model
+    // but leaves the status strip and the raw reply to the owner's own
+    // requests, so a "Check Node" pressed while it is still running is not
+    // overwritten by "Market refreshed" (seen on a slow desk).
     Timer {
         id: btcMarketBootstrapTimer
         interval: 450
         repeat: false
-        onTriggered: root.refreshBtcMarket(false)
+        onTriggered: root.refreshBtcMarket(true)
     }
     Timer {
         interval: 2000

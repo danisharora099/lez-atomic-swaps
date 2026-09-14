@@ -318,9 +318,15 @@ if (role === "maker") {
     const check = await app.findByProperty("objectName", "makerHealth");
     if (check.error || check.matches?.length !== 1) throw new Error("Check Node button is unavailable");
     await evaluateIn(app, check.matches[0].id, "clicked()");
-    await app.waitFor(async () => app.expectTexts(["Node ready"]), {
-      timeout: 45000, interval: 300, description: "Maker health status",
-    });
+    try {
+      await app.waitFor(async () => app.expectTexts(["Node ready"]), {
+        timeout: 45000, interval: 300, description: "Maker health status",
+      });
+    } catch (error) {
+      const desk = await evaluateIn(app, check.matches[0].id,
+        "JSON.stringify({ready: root.ready, busy: root.busy, status: root.statusTitle, detail: root.statusDetail, output: String(root.output).slice(0, 300)})");
+      throw new Error(`${error.message}; desk: ${desk.result ?? JSON.stringify(desk)}`);
+    }
     console.log("  health: Node ready");
     narrate("Check Node: the Maker Node reports ready");
   });
@@ -436,9 +442,15 @@ if (role === "maker") {
     const check = await app.findByProperty("objectName", "takerHealth");
     if (check.error || check.matches?.length !== 1) throw new Error("Check Node button is unavailable");
     await evaluateIn(app, check.matches[0].id, "clicked()");
-    await app.waitFor(async () => app.expectTexts(["Node ready"]), {
-      timeout: 45000, interval: 300, description: "Taker health status",
-    });
+    try {
+      await app.waitFor(async () => app.expectTexts(["Node ready"]), {
+        timeout: 45000, interval: 300, description: "Taker health status",
+      });
+    } catch (error) {
+      const desk = await evaluateIn(app, check.matches[0].id,
+        "JSON.stringify({ready: root.ready, busy: root.busy, status: root.statusTitle, detail: root.statusDetail, output: String(root.output).slice(0, 300)})");
+      throw new Error(`${error.message}; desk: ${desk.result ?? JSON.stringify(desk)}`);
+    }
     console.log("  health: Node ready");
   });
 

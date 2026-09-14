@@ -11,6 +11,9 @@
 #   ./scripts/up.sh --fresh       wipe runtime state and volumes first, then start
 #                                 under a new volume prefix (LEZ_VOLUME_PREFIX to pick one)
 #
+#   LEZ_IMAGES=present       use the images named by LEZ_IMAGE_PREFIX and
+#                            LEZ_IMAGE_TAG as they are, pulling nothing (a
+#                            bundle run on a developer's local build)
 #   LEZ_IMAGES=pull          pull the images named by LEZ_IMAGE_PREFIX and
 #                            LEZ_IMAGE_TAG instead of building them (the
 #                            prebuilt-release path; scripts/start.sh sets it,
@@ -135,7 +138,14 @@ case "${LEZ_IMAGES:-build}" in
     echo "  pulling ${LEZ_IMAGE_PREFIX:-lez}-*:${LEZ_IMAGE_TAG:-local}…"
     docker compose --profile tools pull --quiet
     ;;
-  *) echo "LEZ_IMAGES must be build or pull" >&2; exit 64 ;;
+  present)
+    # A developer's bundle run on images built locally (tag `local`): nothing is
+    # pulled; every image the compose file names must already exist.
+    for image in $(docker compose config --images 2>/dev/null | sort -u); do
+      docker image inspect "$image" >/dev/null 2>&1 || { echo "image $image is not present locally" >&2; exit 1; }
+    done
+    ;;
+  *) echo "LEZ_IMAGES must be build, pull or present" >&2; exit 64 ;;
 esac
 
 echo "[3/6] starting chains…"
@@ -147,7 +157,7 @@ bash scripts/repair-indexer.sh >/dev/null 2>&1 || true
 python3 scripts/seed-btc-wallets.py
 
 before="$(sha256sum runtime/market-bootstrap.env 2>/dev/null | cut -c1-64 || true)"
-if [[ "${LEZ_IMAGES:-build}" == pull ]]; then
+if [[ "${LEZ_IMAGES:-build}" == pull || "${LEZ_IMAGES:-build}" == present ]]; then
   echo "[4/6] market: bootstrapped by start.sh from the tools image after this"
 else
   echo "[4/6] market (escrow program, vault claims, bootstrap manifest)…"
@@ -169,7 +179,7 @@ if [[ "$FRESH_LEZ" == 1 ]]; then
   echo "  forgetting swaps that referenced the old chain"
   bash scripts/reset-swaps.sh 2>&1 | tail -1
 fi
-[[ "${LEZ_IMAGES:-build}" == pull ]] || python3 scripts/verify-market.py 2>&1 | tail -1
+[[ "${LEZ_IMAGES:-build}" == pull || "${LEZ_IMAGES:-build}" == present ]] || python3 scripts/verify-market.py 2>&1 | tail -1
 
 if [[ "${LEZ_API_ONLY:-0}" == 1 ]]; then
   echo "API stack ready; run python3 scripts/record-evidence.py after market bootstrap."

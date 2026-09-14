@@ -55,7 +55,7 @@ report "$?" "Node market behaviour"
 section "Basecamp UI regressions"
 for role in maker taker; do
   "${compose[@]}" run --rm --no-deps --entrypoint node basecamp-ui \
-    /ui-tests/verify.mjs "$role" 2>&1 | grep -E '✓|✗|passed'
+    /ui-tests/verify.mjs "$role" 2>&1 | grep -E '✓|✗|passed|^    [A-Za-z]'
   report "${PIPESTATUS[0]}" "UI suite: $role"
 done
 
