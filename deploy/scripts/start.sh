@@ -135,7 +135,7 @@ if [[ "$QUICK" != 1 ]]; then
   for role in maker taker; do
     docker exec lez-basecamp-ui node /ui-tests/verify.mjs "$role" 2>&1 | grep -E '✓|✗|passed|^    [A-Za-z]' || fail "$role UI suite failed"
   done
-  bash scripts/verify-all.sh 2>&1 | grep -E 'OK|FAIL|checks|failed' || fail "verify-all.sh reported a failed stage"
+  bash scripts/verify-all.sh 2>&1 | grep -E 'OK|FAIL|checks|failed|✓|✗|^    [A-Za-z]' || fail "verify-all.sh reported a failed stage"
 fi
 if [[ "$RUN_SWAP" == 1 ]]; then
   log "one full BTC → LEZ swap through the two Basecamp apps"
