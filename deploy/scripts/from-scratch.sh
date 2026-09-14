@@ -366,7 +366,10 @@ build_lez_services() {
     builder_run -- "cd /lez-source; CARGO_TARGET_DIR=/cache/target/lez cargo +1.94.0 build --locked --release \
       --package sequencer_service --package indexer_service 2>&1 | tail -2;
       mkdir -p /provision/lez-services; install -m 0755 /cache/target/lez/release/sequencer_service /cache/target/lez/release/indexer_service /provision/lez-services/"
-    echo "$stamp" > "$PROVISION/lez-services/source-patches.stamp"
+    # Written from inside the builder like the binaries: on a CI runner the
+    # provision tree the container creates belongs to root and a host-side
+    # write into it is refused (seen on the v0.2.2 release run).
+    builder_run -- "printf '%s\\n' '$stamp' > /provision/lez-services/source-patches.stamp"
   fi
 }
 
