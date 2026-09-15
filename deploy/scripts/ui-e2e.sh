@@ -66,12 +66,12 @@ ui() { # ui <role> [ENV=VALUE...]
     docker compose --env-file runtime/runtime.env run --rm --no-deps "${envs[@]}" \
       -e "STEP_TITLE=${step_title:-}" -v "$videos:/recordings" \
       --entrypoint bash basecamp-ui /ui-tests/record-step.sh "$role" "$segment" 2>&1 |
-      grep -E '✓|✗|^    [a-zA-Z]|»|interactive|Expected|passed|failed|has not|Error|DESK|reached|refused|not ready' | grep -viE 'locale'
+      grep -E '✓|✗|^    [a-zA-Z]|»|interactive|Expected|passed|failed|has not|Error|DESK|reached|refused|not ready|label:' | grep -viE 'locale'
     return "${PIPESTATUS[0]}"
   fi
   docker compose --env-file runtime/runtime.env run --rm --no-deps "${envs[@]}" \
     --entrypoint node basecamp-ui /ui-tests/verify.mjs "$role" 2>&1 |
-    grep -E '✓|✗|^    [a-zA-Z]|interactive|Expected|passed|failed|has not|Error|DESK|reached|refused|not ready' | grep -viE 'locale'
+    grep -E '✓|✗|^    [a-zA-Z]|interactive|Expected|passed|failed|has not|Error|DESK|reached|refused|not ready|label:' | grep -viE 'locale'
 }
 # The scenario video: its segments joined in order (same size, rate and codec).
 join_video() {
