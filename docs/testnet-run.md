@@ -39,7 +39,7 @@ dbcache=2048
 [testnet4]
 rpcbind=0.0.0.0
 rpcport=18443
-rpcallowip=0.0.0.0/0
+rpcallowip=192.168.16.0/20
 rpcuser=$BTC_TESTNET4_RPC_USER
 rpcpassword=$BTC_TESTNET4_RPC_PASSWORD
 CONF
@@ -48,6 +48,12 @@ docker run -d --name lez-btc-testnet4 --restart unless-stopped --network lez-tes
   -p 127.0.0.1:48332:18443 -v $D/bitcoin-testnet4:/var/lib/bitcoin -v $D:/run-config-dir:ro \
   lez-bitcoin-core:local -conf=/run-config-dir/bitcoin-testnet4.conf -datadir=/var/lib/bitcoin -printtoconsole
 ```
+
+The RPC is reachable only from the `lez-testnet` Docker network and from this
+host: `rpcallowip` admits that network alone (use the subnet
+`docker network inspect lez-testnet` reports), and the container publishes its
+port to `127.0.0.1` only. `rpcbind` is broad inside the container's own network
+namespace, which has no other route in.
 
 The initial sync took under an hour on Apple silicon. Stop the node with
 `docker stop -t 300 lez-btc-testnet4`; a forced removal loses the unflushed
