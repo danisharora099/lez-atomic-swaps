@@ -43,37 +43,37 @@ const EVIDENCE_AUTHENTICATION_ALGORITHM: &str = "hmac-sha256-v1";
 const EVIDENCE_AUTHENTICATION_DOMAIN: &[u8] =
     b"lez-atomic-swaps/deployment-evidence/hmac-sha256-v1\0";
 const OFFICIAL_AUTHENTICATED_TRANSFER_PROGRAM_ID: [u32; 8] = [
-    3_170_810_844,
-    2_526_647_253,
-    999_807_262,
-    1_205_602_179,
-    3_401_962_591,
-    3_484_055_895,
-    2_106_546_407,
-    1_900_691_388,
+    583_309_054,
+    2_344_528_779,
+    3_806_558_405,
+    2_890_696_795,
+    2_257_354_672,
+    3_978_764_116,
+    2_273_929_063,
+    1_518_858_078,
 ];
 const OFFICIAL_TOKEN_PROGRAM_ID: [u32; 8] = [
-    2_282_739_141,
-    348_907_455,
-    1_046_946_228,
-    3_735_699_860,
-    585_462_133,
-    3_426_087_150,
-    772_528_164,
-    2_090_518_099,
+    1_047_643_340,
+    4_291_649_067,
+    2_093_396_023,
+    4_016_657_193,
+    3_904_308_476,
+    481_382_041,
+    2_987_082_047,
+    2_603_530_278,
 ];
 const OFFICIAL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID: [u32; 8] = [
-    3_357_312_149,
-    3_615_960_253,
-    3_351_583_505,
-    2_234_166_003,
-    4_153_433_811,
-    2_743_238_177,
-    2_886_052_503,
-    4_160_755_157,
+    1_563_554_205,
+    697_904_783,
+    2_702_216_093,
+    2_965_692_927,
+    3_153_221_855,
+    2_812_443_166,
+    1_620_412_227,
+    3_110_729_199,
 ];
 const OFFICIAL_ASSOCIATED_TOKEN_ACCOUNT_IDENTITY_SOURCE: &str =
-    "lez-v0.2.0-checked-elf-rpc-map-omits-key";
+    "lez-v0.2.4-checked-elf-rpc-map-omits-key";
 
 #[derive(Debug, Parser)]
 #[command(about = "Fail-closed LEZ v0.2 escrow deployment and observation")]

@@ -13,13 +13,13 @@ risc0_guest_builder = "risczero/risc0-guest-builder:r0.1.94.1@sha256:c2f63fdd720
 [target]
 rpc_url = "https://testnet.lez.logos.co"
 channel_id = "0101010101010101010101010101010101010101010101010101010101010101"
-authenticated_transfer_program_id = [3170810844, 2526647253, 999807262, 1205602179, 3401962591, 3484055895, 2106546407, 1900691388]
-token_program_id = [2282739141, 348907455, 1046946228, 3735699860, 585462133, 3426087150, 772528164, 2090518099]
+authenticated_transfer_program_id = [583309054, 2344528779, 3806558405, 2890696795, 2257354672, 3978764116, 2273929063, 1518858078]
+token_program_id = [1047643340, 4291649067, 2093396023, 4016657193, 3904308476, 481382041, 2987082047, 2603530278]
 # `getProgramIds` omits this built-in on the public v0.2 endpoint. These words
-# are the checked ImageID of LEZ v0.2.0's official associated-token-account ELF;
+# are the checked ImageID of LEZ v0.2.4's official associated-token-account ELF;
 # deployment tooling must report the omission rather than claim RPC attestation.
-associated_token_account_program_id = [3357312149, 3615960253, 3351583505, 2234166003, 4153433811, 2743238177, 2886052503, 4160755157]
-associated_token_account_identity_source = "lez-v0.2.0-checked-elf-rpc-map-omits-key"
+associated_token_account_program_id = [1563554205, 697904783, 2702216093, 2965692927, 3153221855, 2812443166, 1620412227, 3110729199]
+associated_token_account_identity_source = "lez-v0.2.4-checked-elf-rpc-map-omits-key"
 
 [artifact]
 elf_sha256 = "2eb04d0b0bbc4feb92f4d30f50a52f072c63ea98ffa9ce105856115b2e409d04"
