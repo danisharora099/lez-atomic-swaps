@@ -11,14 +11,14 @@ pub const CHECKED_M4_ESCROW_PROGRAM_ID_HEX: &str =
 
 /// Word encoding of [`CHECKED_M4_ESCROW_PROGRAM_ID_HEX`] accepted by official LEZ v0.2.
 pub const CHECKED_M4_ESCROW_PROGRAM_ID: [u32; 8] = [
-    0xaeb9_1a43,
-    0x661d_b2c4,
-    0xf8cb_8ee8,
-    0x1d30_83bb,
-    0x0ccc_f45e,
-    0xfba0_0bec,
-    0x0aaa_ba76,
-    0x0ba1_f9c7,
+    0xfc61_2dc2,
+    0x8380_d600,
+    0x0cc2_1ba0,
+    0xe023_7460,
+    0xb8ae_b915,
+    0xf7cd_bb62,
+    0x8407_1b68,
+    0x1b22_6883,
 ];
 
 const FINALIZED_SNAPSHOT_BRACKET: &str =
