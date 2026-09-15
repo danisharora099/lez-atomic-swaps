@@ -40,6 +40,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 videos="$PWD/runtime/evidence/videos"; segments=(); segment_index=0; step_note=""
+# The stack this runs against. The defaults are the local stack; the public
+# testnet stack (docs/testnet-run.md) sets, for example:
+#   LEZ_STACK_COMPOSE_ARGS="-p lez-testnet --env-file testnet.env -f compose.yaml -f compose.testnet.yaml"
+#   LEZ_CONTAINER_PREFIX=lez-testnet LEZ_REPAIR_INDEXER=0 LEZ_EXPORT_EVIDENCE=0
+read -r -a stack_compose <<< "${LEZ_STACK_COMPOSE_ARGS:---env-file runtime/runtime.env}"
+container_prefix="${LEZ_CONTAINER_PREFIX:-lez}"
 case "$direction" in TakerSellsForeign|TakerSellsLez) ;; *) echo "--direction must be TakerSellsForeign or TakerSellsLez" >&2; exit 64 ;; esac
 if [[ "$direction" == TakerSellsLez ]]; then
   lock_action=lock_lez; claim_action=claim_btc; refund_action=refund_lez; lock_wallet=lez-maker
@@ -63,13 +69,13 @@ ui() { # ui <role> [ENV=VALUE...]
     local segment; segment="$(printf '%s-%s-%02d-%s' "$direction" "$scenario" "$segment_index" "$role")"
     segments+=("$segment")
     mkdir -p "$videos"
-    docker compose --env-file runtime/runtime.env run --rm --no-deps "${envs[@]}" \
+    docker compose "${stack_compose[@]}" run --rm --no-deps "${envs[@]}" \
       -e "STEP_TITLE=${step_title:-}" -v "$videos:/recordings" \
       --entrypoint bash basecamp-ui /ui-tests/record-step.sh "$role" "$segment" 2>&1 |
       grep -E '✓|✗|^    [a-zA-Z]|»|interactive|Expected|passed|failed|has not|Error|DESK|reached|refused|not ready|label:' | grep -viE 'locale'
     return "${PIPESTATUS[0]}"
   fi
-  docker compose --env-file runtime/runtime.env run --rm --no-deps "${envs[@]}" \
+  docker compose "${stack_compose[@]}" run --rm --no-deps "${envs[@]}" \
     --entrypoint node basecamp-ui /ui-tests/verify.mjs "$role" 2>&1 |
     grep -E '✓|✗|^    [a-zA-Z]|interactive|Expected|passed|failed|has not|Error|DESK|reached|refused|not ready|label:' | grep -viE 'locale'
 }
@@ -79,7 +85,7 @@ join_video() {
   local list="$videos/$direction-$scenario.txt" out="$videos/$direction-$scenario.mp4" seg
   : > "$list"
   for seg in "${segments[@]}"; do [[ -s "$videos/$seg.mp4" ]] && printf "file '%s'\n" "$seg.mp4" >> "$list"; done
-  docker compose --env-file runtime/runtime.env run --rm --no-deps -v "$videos:/recordings" -w /recordings \
+  docker compose "${stack_compose[@]}" run --rm --no-deps -v "$videos:/recordings" -w /recordings \
     --entrypoint ffmpeg basecamp-ui -hide_banner -loglevel error -y -f concat -safe 0 -i "$direction-$scenario.txt" -c copy "$direction-$scenario.mp4" >/dev/null 2>&1 \
     && log "video: runtime/evidence/videos/$direction-$scenario.mp4" \
     || log "video join failed for $direction-$scenario"
@@ -89,7 +95,7 @@ join_video() {
 taker_swaps() { # the Taker Node's own view: "<swap_id> <state> <generation> <action>"
   local reply
   for _ in 1 2 3 4 5; do
-    reply="$(docker exec lez-taker-node curl -sS --max-time 20 --unix-socket /run/lez/taker/node.sock \
+    reply="$(docker exec "$container_prefix-taker-node" curl -sS --max-time 20 --unix-socket /run/lez/taker/node.sock \
       -H 'content-type: application/json' \
       --data '{"jsonrpc":"2.0","id":1,"method":"taker_swap_list_v1","params":[{"schema_version":1}]}' http://localhost/ 2>/dev/null)"
     [ -n "$reply" ] && break
@@ -148,7 +154,7 @@ maker_wait() { # the awaiting-claim label names the asset the Taker claims: what
 finish() { # finish <swap_id>: both desks show the swap completed, then export the chain evidence
   maker_wait completed "$1"
   taker_wait completed "$1"
-  python3 scripts/export-node-evidence.py --swap "$1" || fail "evidence export"
+  if [[ "${LEZ_EXPORT_EVIDENCE:-1}" == 1 ]]; then python3 scripts/export-node-evidence.py --swap "$1" || fail "evidence export"; fi
 }
 
 # ---- scenarios ------------------------------------------------------------------
@@ -209,7 +215,7 @@ scenario_maker_refund() {
 run_one() {
   local name="$1" started; started="$(date -u +%s)"
   log "=== $name ($direction)"
-  bash scripts/repair-indexer.sh >/dev/null || fail "repair-indexer.sh"
+  if [[ "${LEZ_REPAIR_INDEXER:-1}" == 1 ]]; then bash scripts/repair-indexer.sh >/dev/null || fail "repair-indexer.sh"; fi
   case "$name" in
     happy) scenario_happy ;;
     restart-taker) scenario_restart taker ;;

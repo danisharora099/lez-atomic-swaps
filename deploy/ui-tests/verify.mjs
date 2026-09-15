@@ -122,10 +122,16 @@ async function setText(app, objectName, value, property = "text") {
 }
 
 // The Maker's terms for this run, typed into the offer form: 1,000 LEZ
-// units for 0.01 BTC, whole offer only, for one hour.
+// units for 0.01 BTC by default, whole offer only, for one hour. A run on the
+// public testnets passes smaller amounts (LEZ_UI_LEZ_AMOUNT, LEZ_UI_BTC_AMOUNT).
+const lezAmount = process.env.LEZ_UI_LEZ_AMOUNT || "1000";
+const btcAmount = process.env.LEZ_UI_BTC_AMOUNT || "0.01";
+const lezText = `${Number(lezAmount).toLocaleString("en-US")} LEZ`;
+const btcText = `${Number(btcAmount).toFixed(8)} BTC`;
+const btcShort = `${btcAmount} BTC`;
 const makerTerms = [
-  ["makerSellAmount", reverseDirection ? "0.01" : "1000", "amount"],
-  ["makerReceiveAmount", reverseDirection ? "1000" : "0.01", "amount"],
+  ["makerSellAmount", reverseDirection ? btcAmount : lezAmount, "amount"],
+  ["makerReceiveAmount", reverseDirection ? lezAmount : btcAmount, "amount"],
   ["makerMinimumSats", ""],
   ["makerOfferTtl", "3600"],
 ];
@@ -371,8 +377,8 @@ if (role === "maker") {
     while (pending < 2) {
       const target = pending + 1;
       narrate(reverseDirection
-        ? "New offer: the Maker sells 0.01 BTC for 1,000 LEZ; Publish sends it to the Maker Node, which signs and announces it over Delivery"
-        : "New offer: the Maker sells 1,000 LEZ for 0.01 BTC; Publish sends it to the Maker Node, which signs and announces it over Delivery");
+        ? `New offer: the Maker sells ${btcShort} for ${lezText}; Publish sends it to the Maker Node, which signs and announces it over Delivery`
+        : `New offer: the Maker sells ${lezText} for ${btcShort}; Publish sends it to the Maker Node, which signs and announces it over Delivery`);
       munich = unwrap(await publishOfferOnce(
         app,
         (envelope) => envelope.ok === true && pendingHere(envelope.result?.inventory) >= target,
@@ -429,7 +435,7 @@ if (role === "maker") {
     await app.expectTexts(["ACCOUNT", "My orders", "Available orders", "Zurich Wallet 01 · Taker Node"]);
     // The order book arrives with the first market snapshot after the view
     // opens; wait for the rendered rows instead of racing that request.
-    await app.waitFor(async () => app.expectTexts(["0.01000000 BTC", "1,000 LEZ"]), {
+    await app.waitFor(async () => app.expectTexts([btcText, lezText]), {
       timeout: 15000, interval: 500, description: "first market snapshot rendered",
     });
     {
@@ -521,13 +527,13 @@ if (role === "maker") {
   // What each Taker button does, in the words of the direction.
   function takerNarration(action, moment) {
     const texts = {
-      lock_btc: ["Lock 0.01 BTC: the Taker Node broadcasts the exact Bitcoin funding transaction it signed at take time",
+      lock_btc: [`Lock ${btcShort}: the Taker Node broadcasts the exact Bitcoin funding transaction it signed at take time`,
                  "Bitcoin lock broadcast; the Maker Node funds the LEZ escrow on its own once this lock is confirmed"],
-      lock_lez: ["Lock 1,000 LEZ: the Taker Node submits the escrow initialization and funding its sidecar prepared",
+      lock_lez: [`Lock ${lezText}: the Taker Node submits the escrow initialization and funding its sidecar prepared`,
                  "LEZ lock submitted; the Maker Node locks Bitcoin on its own once this lock is final"],
-      claim_lez: ["Claim 1,000 LEZ: the revealing claim spends the LEZ escrow and discloses the adaptor secret",
+      claim_lez: [`Claim ${lezText}: the revealing claim spends the LEZ escrow and discloses the adaptor secret`,
                   "LEZ claim submitted; the Maker Node uses the revealed secret to claim the Bitcoin"],
-      claim_btc: ["Claim 0.01 BTC: the revealing claim spends the Maker's Bitcoin lock and discloses the adaptor secret",
+      claim_btc: [`Claim ${btcShort}: the revealing claim spends the Maker's Bitcoin lock and discloses the adaptor secret`,
                   "Bitcoin claim broadcast; the Maker Node uses the revealed secret to claim the LEZ escrow"],
       refund_btc: ["The Maker never locked and its cutoff has passed: the desk offers Refund; pressing it admits the refund, which the Node drives once the Bitcoin timelock matures",
                    "Refund admitted; the Taker Node broadcasts it when the timelock allows and follows it to confirmation"],
@@ -540,12 +546,12 @@ if (role === "maker") {
   // A refund is admitted at once and driven by the Node until the chain
   // clocks allow it, so its row settles into refunding/refunded much later.
   const takerActions = reverseDirection
-    ? { lock_lez: ["Lock 1,000 LEZ", ["locking_lez"], 45000],
-        claim_btc: ["Claim 0.01000000 BTC", ["claiming_btc"], 45000],
-        refund_lez: ["Refund 1,000 LEZ", ["refunding", "refunded"], waitTimeoutMs] }
-    : { lock_btc: ["Lock 0.01000000 BTC", ["locking_btc"], 45000],
-        claim_lez: ["Claim 1,000 LEZ", ["claiming_lez"], 45000],
-        refund_btc: ["Refund 0.01000000 BTC", ["refunding", "refunded"], waitTimeoutMs] };
+    ? { lock_lez: [`Lock ${lezText}`, ["locking_lez"], 45000],
+        claim_btc: [`Claim ${btcText}`, ["claiming_btc"], 45000],
+        refund_lez: [`Refund ${lezText}`, ["refunding", "refunded"], waitTimeoutMs] }
+    : { lock_btc: [`Lock ${btcText}`, ["locking_btc"], 45000],
+        claim_lez: [`Claim ${lezText}`, ["claiming_lez"], 45000],
+        refund_btc: [`Refund ${btcText}`, ["refunding", "refunded"], waitTimeoutMs] };
   if (Object.hasOwn(takerActions, process.env.INTERACTIVE_ACTION)) {
     const action = process.env.INTERACTIVE_ACTION;
     const [label, working, settleMs] = takerActions[action];
