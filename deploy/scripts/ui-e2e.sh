@@ -138,7 +138,13 @@ take() { # take <var>: the Taker desk takes one offer of this direction; the new
 }
 taker_act() { step "Taker desk: $1 on ${2:0:12}" taker "INTERACTIVE_ACTION=$1" "INTERACTIVE_SWAP_ID=$2"; }
 taker_wait() { step "Taker desk shows ${2:0:12} at $1" taker INTERACTIVE_ACTION=wait "INTERACTIVE_STATE=$1" "INTERACTIVE_SWAP_ID=$2"; }
-maker_wait() { step "Maker desk shows ${2:0:12} at $1" maker INTERACTIVE_ACTION=wait "INTERACTIVE_STATE=$1" "INTERACTIVE_SWAP_ID=$2"; }
+maker_wait() { # the awaiting-claim label names the asset the Taker claims: what the Maker locked
+  local label=""
+  if [[ "$1" == awaiting_taker_claim ]]; then
+    [[ "$direction" == TakerSellsLez ]] && label="Waiting for the Taker's Bitcoin claim" || label="Waiting for the Taker's LEZ claim"
+  fi
+  step "Maker desk shows ${2:0:12} at $1" maker INTERACTIVE_ACTION=wait "INTERACTIVE_STATE=$1" "INTERACTIVE_SWAP_ID=$2" "INTERACTIVE_EXPECT_LABEL=$label"
+}
 finish() { # finish <swap_id>: both desks show the swap completed, then export the chain evidence
   maker_wait completed "$1"
   taker_wait completed "$1"
