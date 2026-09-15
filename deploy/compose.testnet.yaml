@@ -1,0 +1,56 @@
+# compose.testnet.yaml — the Maker and Taker Nodes and the desks on public
+# networks: the official LEZ v0.2 testnet and Bitcoin testnet4.
+#
+#   docker compose -p lez-testnet -f compose.yaml -f compose.testnet.yaml \
+#     up -d maker-node taker-node basecamp-ui
+#
+# Nothing here is a chain: the Nodes reach services on the external Docker
+# network `lez-testnet`, each run next to this stack (docs/testnet-run.md):
+#   lez-btc-testnet4       Bitcoin Core 31.1 on testnet4 (txindex, txospenderindex, RPC 18443)
+#   lez-testnet-sequencer  HTTP on :3040 to https://testnet.lez.logos.co (the official sequencer)
+#   lez-testnet-indexer    LEZ v0.2.4 indexer on :8779, following the public chain
+#   lez-testnet-node       Logos Blockchain node on the public testnet (feeds the indexer)
+# The Nodes keep their literal-loopback endpoints; their entrypoints forward
+# 127.0.0.1:18443/3040/8779 to these names.
+
+x-testnet-node-env: &testnet-node-env
+  LEZ_BTC_NETWORK: testnet4
+  LEZ_BITCOIN_CORE_HOST: lez-btc-testnet4
+  LEZ_SEQUENCER_HOST: lez-testnet-sequencer
+  LEZ_INDEXER_HOST: lez-testnet-indexer
+  LEZ_V02_CHANNEL_ID: "0101010101010101010101010101010101010101010101010101010101010101"
+
+services:
+  maker-init:
+    container_name: lez-testnet-maker-init
+    networks: !override [testnet]
+
+  maker-node:
+    container_name: lez-testnet-maker-node
+    depends_on: !override
+      maker-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *testnet-node-env
+    networks: !override [testnet]
+
+  taker-init:
+    container_name: lez-testnet-taker-init
+    networks: !override [testnet]
+
+  taker-node:
+    container_name: lez-testnet-taker-node
+    environment:
+      <<: *testnet-node-env
+    networks: !override [testnet]
+
+  basecamp-ui:
+    container_name: lez-testnet-basecamp-ui
+    ports: !override
+      - "127.0.0.1:5902:5900"
+    networks: !override [testnet]
+
+networks:
+  testnet:
+    name: lez-testnet
+    external: true
