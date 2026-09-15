@@ -300,7 +300,8 @@ async fn start_configurable_sequencer(
             .expect("included transaction lock")
             .as_ref()
             .filter(|transaction| transaction.hash() == requested)
-            .cloned();
+            .cloned()
+            .map(|transaction| (transaction, 1_u64));
         Ok::<_, ErrorObjectOwned>(observed)
     })
     .expect("transaction lookup method");

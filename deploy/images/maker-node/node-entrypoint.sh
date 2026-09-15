@@ -18,7 +18,7 @@ sidecar_port_base="${LEZ_SIDECAR_PORT_BASE:?}"
 sequencer_url="${LEZ_SEQUENCER_URL:-http://sequencer:3040}"
 indexer_url="${LEZ_INDEXER_URL:-http://indexer:8779}"
 channel_id="${LEZ_V02_CHANNEL_ID:?}"
-auth_transfer_program_id="${LEZ_AUTH_TRANSFER_PROGRAM_ID:-dcbbfebcd59399961ed9973b8307dc475fd4c5ca5779aacfe7588f7dbc3f4a71}"
+auth_transfer_program_id="${LEZ_AUTH_TRANSFER_PROGRAM_ID:-fe96c4228babbe8bc578e3e25b884cacb07f8c86541f27ed676789875eef875a}"
 
 umask 077
 chmod 0700 "$state" 2>/dev/null || true

@@ -15,16 +15,16 @@ risc0-build = "=3.0.5"
 risc0-zkvm = { version = "=3.0.5", features = ["std"] }
 
 [dev-dependencies]
-ata_core = { package = "associated_token_account_core", version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0" }
+ata_core = { package = "associated_token_account_core", version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
 borsh = { version = "=1.7.0", features = ["derive"] }
 lez-zec-escrow-v02 = { version = "=0.0.0", path = ".." }
 musig2 = { version = "=0.4.1", default-features = false, features = ["secp256k1"] }
-nssa = { package = "lee", version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0" }
-programs = { version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0", features = ["artifacts"] }
+nssa = { package = "lee", version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
+programs = { version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4", features = ["artifacts"] }
 serde = { version = "=1.0.228", features = ["derive"] }
 sha2 = "=0.10.9"
-spel-framework-core = { version = "=0.5.0", git = "https://github.com/logos-co/spel.git", rev = "df17acd98436be4f09c55877dae1fe2e73cbcdca" }
-token_core = { version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.0" }
+spel-framework-core = { version = "=0.6.0", git = "https://github.com/logos-co/spel.git", rev = "7f13e71f91372a32e26b71d19dbbb60532711048" }
+token_core = { version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
 
 [package.metadata.risc0]
 methods = ["guest"]

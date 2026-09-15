@@ -155,12 +155,12 @@ impl RpcServer for MockNode {
         Ok(Vec::new())
     }
 
-    async fn get_proof_for_commitment(
+    async fn get_proofs_and_root(
         &self,
-        _commitment: Commitment,
-    ) -> Result<Option<MembershipProof>, ErrorObjectOwned> {
+        commitments: Vec<Commitment>,
+    ) -> Result<(Vec<Option<MembershipProof>>, [u8; 32]), ErrorObjectOwned> {
         self.record_call();
-        Ok(None)
+        Ok((vec![None; commitments.len()], [0; 32]))
     }
 
     async fn get_account(&self, _account_id: AccountId) -> Result<Account, ErrorObjectOwned> {
