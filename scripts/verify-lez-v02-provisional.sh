@@ -374,12 +374,14 @@ check_policy_advisories \
   "methods" \
   "compat/lez-v0.2-provisional/escrow/methods/deny.toml" \
   RUSTSEC-2023-0071 \
-  RUSTSEC-2025-0055
+  RUSTSEC-2025-0055 \
+  RUSTSEC-2026-0285
 check_policy_advisories \
   "guest" \
   "compat/lez-v0.2-provisional/escrow/methods/guest/deny.toml" \
   RUSTSEC-2023-0071 \
-  RUSTSEC-2025-0055
+  RUSTSEC-2025-0055 \
+  RUSTSEC-2026-0285
 check_policy_advisories \
   "deployer" \
   "compat/lez-v0.2-provisional/escrow/deployer/deny.toml" \
