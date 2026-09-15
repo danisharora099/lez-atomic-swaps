@@ -530,6 +530,33 @@ def scenario_taker_refund(stamp: str) -> dict:
     return {"swap_id": swap_id, "lock_txid": txid, "taker_balance_before": before, "taker_balance_after": after}
 
 
+STALE_GENERATION = "generation is stale"
+
+
+def maker_action_with_fresh_generation(method: str, swap_id: str, request_id: str, attempts: int = 5) -> dict:
+    """A manual Maker action (refund, claim) is guarded by the actor's lease
+    generation: the request names the generation it was decided on and the
+    Node refuses it once the worker has moved on. Between reading the view and
+    sending, the worker may run; that refusal (and only that one) is answered
+    by reading the generation again and resending the same request id, a
+    bounded number of times. Any other error still fails the scenario."""
+    last = None
+    for attempt in range(1, attempts + 1):
+        view = maker_view(swap_id)
+        reply = rpc("maker", method, {"request_id": request_id, "id": swap_id,
+                                      "expected_generation": view["lease_generation"]})
+        if "error" not in reply:
+            if attempt > 1:
+                log(f"  {method} accepted at generation {view['lease_generation']} (attempt {attempt})")
+            return reply["result"]
+        last = reply["error"]
+        if STALE_GENERATION not in str(last.get("message", "")):
+            raise Failure(f"maker {method} failed: {json.dumps(last)[:300]}")
+        log(f"  {method}: generation {view['lease_generation']} was stale (attempt {attempt}); reading it again")
+        time.sleep(3)
+    raise Failure(f"maker {method} kept refusing a stale generation after {attempts} attempts: {json.dumps(last)[:200]}")
+
+
 def scenario_maker_refund(stamp: str) -> dict:
     profile = require_fast_profile()
     earlier = int(profile["LEZ_BTC_EARLIER_REFUND_SECONDS"])
@@ -546,9 +573,7 @@ def scenario_maker_refund(stamp: str) -> dict:
     log(f"  Maker locked; the Taker never claims. Waiting for the Maker's refund deadline ({earlier}s after the take)")
     while time.time() < started + earlier + 30:
         time.sleep(20)
-    view = maker_view(swap_id)
-    result = call("maker", "maker_actor_refund_v1", {"request_id": f"e2e-maker-refund-{stamp}", "id": swap_id,
-                                                      "expected_generation": view["lease_generation"]})
+    result = maker_action_with_fresh_generation("maker_actor_refund_v1", swap_id, f"e2e-maker-refund-{stamp}")
     log(f"  Maker refund queued: {json.dumps(result)[:160]}")
     deadline = time.time() + 900
     while time.time() < deadline:
