@@ -65,7 +65,9 @@ cd lez-atomic-swaps/deploy
 The two Basecamp apps are also published as Logos modules; add the catalog
 `https://raw.githubusercontent.com/mandrigin/logos-modules-release-base/main/logos-repo.json`
 in Basecamp's package manager to install **LEZ / BTC Maker** and
-**LEZ / BTC Taker** at the release version.
+**LEZ / BTC Taker** at the release version. A native Basecamp on macOS reaches
+the Compose Nodes through `deploy/scripts/desk-sockets.py`; the steps are in
+[`apps/basecamp/README.md`](apps/basecamp/README.md#native-basecamp-on-macos).
 
 Open the Basecamp desktop on macOS:
 

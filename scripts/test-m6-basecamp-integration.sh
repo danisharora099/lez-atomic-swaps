@@ -54,3 +54,15 @@ done
 
 "${nix[@]}" build --no-update-lock-file --no-link "$maker" "$taker"
 echo "Maker and Taker Basecamp integration tests passed"
+
+# The catalog publishes the per-role flakes' packages; prove the archive each
+# one produces carries the shared UI kit next to Main.qml in every variant.
+# The per-role flakes carry no lock file (a catalog resolves them from the
+# pinned Chat release), so their lock is computed and not written.
+for role in maker taker; do
+  output="$("${nix[@]}" build --no-write-lock-file --no-link --print-out-paths "path:apps/basecamp?dir=${role}#lgx")"
+  archive="$(find "$output" -maxdepth 2 -name '*.lgx' | head -n1)"
+  [[ -n "$archive" ]] || fail "the ${role} catalog flake produced no .lgx"
+  ./scripts/check-basecamp-lgx-kit.sh "$archive"
+done
+echo "Maker and Taker catalog packages carry the shared UI kit"
