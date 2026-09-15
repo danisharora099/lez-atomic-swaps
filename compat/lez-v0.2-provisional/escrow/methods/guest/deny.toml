@@ -5,6 +5,7 @@ unused-ignored-advisory = "deny"
 ignore = [
     { id = "RUSTSEC-2023-0071", reason = "Exact Risc0 3.0.5 guest build tooling forces rsa 0.9.10 through rzup. The verifier proves rzup publish/install features are absent; no RSA private-key operation enters the escrow guest. Re-audit on every Risc0 or LEZ pin change." },
     { id = "RUSTSEC-2025-0055", reason = "Exact Risc0 3.0.5 guest build tooling forces tracing-subscriber 0.2.25 through arkworks. The verifier proves vulnerable fmt and ansi features are absent. Re-audit on every Risc0 or LEZ pin change." },
+    { id = "RUSTSEC-2026-0285", reason = "rustls 0.23.42 sits in the guest graph only through the host-side build tooling (reqwest, quinn); no TLS runs inside the zkVM guest. The guest ELF is pinned by digest and its program id is deployed on chain, so this lockfile does not move in a patch release; the workspace, sidecar, reproducers, provisional root and deployer graphs are at rustls 0.23.45." },
 ]
 
 [licenses]
