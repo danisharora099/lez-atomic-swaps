@@ -44,7 +44,8 @@ impl BitcoinNetworkName {
     pub const fn actor_connectivity(self) -> &'static str {
         match self {
             Self::Regtest => "isolated_local",
-            Self::Mainnet | Self::Testnet4 | Self::Signet => "networked",
+            Self::Testnet4 => "testnet4_networked",
+            Self::Mainnet | Self::Signet => "networked",
         }
     }
 }
