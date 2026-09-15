@@ -86,14 +86,14 @@ fn request(
 }
 
 const VAULT_PROGRAM_ID_SNAPSHOT: [u32; 8] = [
-    1_168_813_120,
-    241_877_831,
-    3_407_559_972,
-    2_131_462_206,
-    1_965_161_891,
-    2_000_235_008,
-    2_574_408_698,
-    1_333_126_597,
+    576_165_744,
+    3_993_764_202,
+    163_362_149,
+    1_615_442_611,
+    776_477_111,
+    319_518_336,
+    138_645_106,
+    1_443_702_277,
 ];
 
 #[tokio::test]
@@ -105,7 +105,7 @@ async fn prepares_exact_maker_and_taker_claim_snapshots_with_distinct_allocation
             100_000,
             "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
             "B1UN3hPgxacgHKBRoThcAmsPajGcUf6YXUhgB36x4DAd",
-            "7Mzr43PK9VxpcvwdjgL8PeE4nb2aG9FqBKLfkoH8RBmQ",
+            "6qLiud4UFd57LTtpvcT3PLfNfL88TCwjXeG83SFsw4C1",
             "v02-maker-vault-claim-0001",
         ),
         (
@@ -114,7 +114,7 @@ async fn prepares_exact_maker_and_taker_claim_snapshots_with_distinct_allocation
             200_000,
             "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766",
             "34Kqgek6R7N1zU5FSJz8ziXwSPEPCuWGcn1T7GCVrfib",
-            "AXLjVw4tKTgieQoGRgXMVLVVaB4c5YnL1YTogZdX1cpH",
+            "GdrvEKdGG2Ttne7wDSSXzhGqGi88K46NEJQReF4e3ETe",
             "v02-taker-vault-claim-0001",
         ),
     ];
