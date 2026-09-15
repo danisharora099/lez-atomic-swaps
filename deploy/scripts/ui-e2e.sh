@@ -66,12 +66,12 @@ ui() { # ui <role> [ENV=VALUE...]
     docker compose --env-file runtime/runtime.env run --rm --no-deps "${envs[@]}" \
       -e "STEP_TITLE=${step_title:-}" -v "$videos:/recordings" \
       --entrypoint bash basecamp-ui /ui-tests/record-step.sh "$role" "$segment" 2>&1 |
-      grep -E '✓|✗|^    [a-zA-Z]|»|interactive|Expected|passed|failed|has not|Error|DESK|reached|refused|not ready' | grep -viE 'locale'
+      grep -E '✓|✗|^    [a-zA-Z]|»|interactive|Expected|passed|failed|has not|Error|DESK|reached|refused|not ready|label:' | grep -viE 'locale'
     return "${PIPESTATUS[0]}"
   fi
   docker compose --env-file runtime/runtime.env run --rm --no-deps "${envs[@]}" \
     --entrypoint node basecamp-ui /ui-tests/verify.mjs "$role" 2>&1 |
-    grep -E '✓|✗|^    [a-zA-Z]|interactive|Expected|passed|failed|has not|Error|DESK|reached|refused|not ready' | grep -viE 'locale'
+    grep -E '✓|✗|^    [a-zA-Z]|interactive|Expected|passed|failed|has not|Error|DESK|reached|refused|not ready|label:' | grep -viE 'locale'
 }
 # The scenario video: its segments joined in order (same size, rate and codec).
 join_video() {
@@ -138,7 +138,13 @@ take() { # take <var>: the Taker desk takes one offer of this direction; the new
 }
 taker_act() { step "Taker desk: $1 on ${2:0:12}" taker "INTERACTIVE_ACTION=$1" "INTERACTIVE_SWAP_ID=$2"; }
 taker_wait() { step "Taker desk shows ${2:0:12} at $1" taker INTERACTIVE_ACTION=wait "INTERACTIVE_STATE=$1" "INTERACTIVE_SWAP_ID=$2"; }
-maker_wait() { step "Maker desk shows ${2:0:12} at $1" maker INTERACTIVE_ACTION=wait "INTERACTIVE_STATE=$1" "INTERACTIVE_SWAP_ID=$2"; }
+maker_wait() { # the awaiting-claim label names the asset the Taker claims: what the Maker locked
+  local label=""
+  if [[ "$1" == awaiting_taker_claim ]]; then
+    [[ "$direction" == TakerSellsLez ]] && label="Waiting for the Taker's Bitcoin claim" || label="Waiting for the Taker's LEZ claim"
+  fi
+  step "Maker desk shows ${2:0:12} at $1" maker INTERACTIVE_ACTION=wait "INTERACTIVE_STATE=$1" "INTERACTIVE_SWAP_ID=$2" "INTERACTIVE_EXPECT_LABEL=$label"
+}
 finish() { # finish <swap_id>: both desks show the swap completed, then export the chain evidence
   maker_wait completed "$1"
   taker_wait completed "$1"

@@ -206,8 +206,10 @@ SwapRow makerRow(const QString& phase, const QString& nextAction, const QString&
     if (phase == "taker_lock_confirmed" || phase == "awaiting_maker_confirmations")
         return {sellsLez ? "funding_lez" : "locking_btc", sellsLez ? "Funding the LEZ escrow" : "Locking Bitcoin", 45,
                 "Your Node locks " + myChain + " automatically now that the Taker's " + theirChain + " lock is confirmed", "", ""};
+    // The Taker claims what this Maker locked (myChain); its own lock is the
+    // other asset. Selling LEZ the Maker waits for the Taker's LEZ claim.
     if (phase == "both_legs_locked")
-        return {"awaiting_taker_claim", "Waiting for the Taker's " + theirChain + " claim", 65,
+        return {"awaiting_taker_claim", "Waiting for the Taker's " + myChain + " claim", 65,
                 "The Taker's revealing claim is the next step", "", ""};
     if (phase == "claim_evidence_available")
         return {sellsLez ? "claiming_btc" : "claiming_lez", "Claiming " + theirChain, 85,

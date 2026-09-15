@@ -248,6 +248,17 @@ async function waitDeskState(app, outputName, wanted, states, label) {
       const seen = rows.map((swap) => `${swap.state}${swap.state_label ? " (" + swap.state_label + ")" : ""}`).join(", ") || "no row";
       throw new Error(`no ${role} swap ${wanted ? wanted.slice(0, 12) + " " : ""}has reached ${states.join("|")}; desk shows ${seen}`);
     }
+    // The label the desk shows for the reached state, when the step names one
+    // (the asset in it depends on the direction: the Maker waits for the
+    // Taker's claim of what the Maker locked).
+    const expectedLabel = process.env.INTERACTIVE_EXPECT_LABEL;
+    if (expectedLabel) {
+      const reached = rows.find((swap) => states.includes(swap.state));
+      if (reached.state_label !== expectedLabel) {
+        throw new Error(`${role} desk labels ${reached.state} as "${reached.state_label}", expected "${expectedLabel}"`);
+      }
+      console.log(`  label: ${reached.state_label}`);
+    }
   }, { timeout: waitTimeoutMs, interval: 10000, description: label });
 }
 
