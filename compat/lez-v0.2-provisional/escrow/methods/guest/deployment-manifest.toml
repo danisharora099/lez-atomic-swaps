@@ -28,7 +28,7 @@ program_id_words = [2641451435, 1816281680, 4153029297, 2592620711, 2907640689, 
 
 [interface]
 idl_sha256 = "04895050affb173d3e87329994ecbbed54781a38d5454ce5b36e155916e4134f"
-generated_client_sha256 = "bcc0d3898343317bdd3bcc0987ec9559db7f4060c4e9fb45f096d1bcd34b48ac"
+generated_client_sha256 = "20d9cd5721bc0121fd21954e9826b219e0050c33a5d599992c170ef7c5da8c72"
 instruction_count = 18
 initialize_token_witnessed_variant = 11
 claim_token_witnessed_variant = 12

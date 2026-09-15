@@ -843,14 +843,14 @@ fn f7_public_idl_and_artifact_identity_are_exact_and_append_only() {
     assert_eq!(
         manifest.artifact.program_id_words,
         [
-            2_931_366_467,
-            1_713_222_340,
-            4_174_089_960,
-            489_718_715,
-            214_758_494,
-            4_221_570_028,
-            178_961_014,
-            195_164_615,
+            4_234_227_138,
+            2_206_258_688,
+            214_047_648,
+            3_760_419_936,
+            3_098_458_389,
+            4_157_455_202,
+            2_215_058_280,
+            455_239_811,
         ]
     );
     assert_eq!(interface.instruction_count, 18);

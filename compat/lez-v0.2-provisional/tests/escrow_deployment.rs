@@ -82,7 +82,7 @@ fn v02_escrow_guest_generated_client_and_deployment_inputs_exist() {
         .client_code;
     let generated_client_sha256 = hex::encode(Sha256::digest(generated.as_bytes()));
     assert_eq!(
-        generated_client_sha256, "bcc0d3898343317bdd3bcc0987ec9559db7f4060c4e9fb45f096d1bcd34b48ac",
+        generated_client_sha256, "20d9cd5721bc0121fd21954e9826b219e0050c33a5d599992c170ef7c5da8c72",
         "the generated client changed without an explicit ABI review"
     );
     let funding = generated_method(&generated, "fund_token", Some("claim_token"));
@@ -220,14 +220,14 @@ fn v02_escrow_guest_generated_client_and_deployment_inputs_exist() {
             .map(|word| word.as_integer().expect("ProgramId word"))
             .collect::<Vec<_>>(),
         vec![
-            2_931_366_467,
-            1_713_222_340,
-            4_174_089_960,
-            489_718_715,
-            214_758_494,
-            4_221_570_028,
-            178_961_014,
-            195_164_615,
+            4_234_227_138,
+            2_206_258_688,
+            214_047_648,
+            3_760_419_936,
+            3_098_458_389,
+            4_157_455_202,
+            2_215_058_280,
+            455_239_811,
         ]
     );
     assert_eq!(
@@ -236,7 +236,7 @@ fn v02_escrow_guest_generated_client_and_deployment_inputs_exist() {
     );
     assert_eq!(
         manifest["interface"]["generated_client_sha256"].as_str(),
-        Some("bcc0d3898343317bdd3bcc0987ec9559db7f4060c4e9fb45f096d1bcd34b48ac")
+        Some("20d9cd5721bc0121fd21954e9826b219e0050c33a5d599992c170ef7c5da8c72")
     );
     assert_eq!(
         manifest["interface"]["instruction_count"].as_integer(),
