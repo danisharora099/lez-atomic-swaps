@@ -60,10 +60,27 @@ The initial sync took under an hour on Apple silicon. Stop the node with
 cache and the node re-syncs tens of thousands of blocks.
 
 Create one wallet per role (`lez-maker`, `lez-taker`) with `createwallet` and
-fund each from a testnet4 faucet. Every public testnet4 faucet found requires a
-captcha or a login, so this step needs a person; about 30,000 sats per wallet
-covers a swap in each direction. Mining is not an option: minimum-difficulty
-blocks are taken the moment they become valid.
+fund them from a testnet4 faucet. CypherFaucet publishes a keyless, captcha-free
+API intended for tooling, which pays 0.01 tBTC (1,000,000 sats) per claim and
+accepts taproot addresses:
+
+```sh
+curl -X POST https://cypherfaucet.com/api/v1/claim \
+  -H 'content-type: application/json' \
+  -d '{"network":"btc-testnet","address":"<tb1… from getnewaddress>"}'
+```
+
+Claims are limited to one per address and one per source IP per hour, so honour
+`Retry-After` on 429 instead of retrying in a loop; `GET /api/v1/info` reports the
+faucet's balance. One claim funds both directions: the two wallets share a node, so
+`sendtoaddress` moves a share to the other role once the claim confirms. About
+30,000 sats per wallet covers a swap in each direction, and the Nodes require one
+confirmation before they spend an output, so a claim is not usable while it sits in
+the mempool. Every other public testnet4 faucet found is gated by a captcha or a
+login, and signet's faucets are gated more heavily still. Mining is not a route to
+spendable coins: a coinbase output needs 100 confirmations, about 33 hours at
+testnet4's block rate, and minimum-difficulty blocks are in any case taken the
+moment they become valid.
 
 ## 3. The public Logos Blockchain node
 
