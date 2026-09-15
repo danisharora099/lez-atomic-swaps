@@ -22,3 +22,11 @@ serde = { version = "=1.0.228", features = ["derive"] }
 sha2 = "=0.10.9"
 spel-framework = { version = "=0.6.0", git = "https://github.com/logos-co/spel.git", rev = "7f13e71f91372a32e26b71d19dbbb60532711048" }
 token_core = { version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
+
+# The deployment transaction carries this program's bytes, and the official LEZ
+# testnet sequencer admits at most 614,200 bytes per transaction. The symbol
+# and string tables (about 198 KB) are never loaded by the zkVM, so they are
+# stripped. Stripping changes the program binary, so the ImageID and the
+# program id are those of the stripped guest.
+[profile.release]
+strip = "symbols"

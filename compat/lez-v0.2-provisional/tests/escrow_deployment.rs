@@ -206,11 +206,11 @@ fn v02_escrow_guest_generated_client_and_deployment_inputs_exist() {
     );
     assert_eq!(
         manifest["artifact"]["elf_sha256"].as_str(),
-        Some("2eb04d0b0bbc4feb92f4d30f50a52f072c63ea98ffa9ce105856115b2e409d04")
+        Some("3d49502421a5705b2c386bde8d3a439914196f0727169a98794932c14b9777d4")
     );
     assert_eq!(
         manifest["artifact"]["image_id"].as_str(),
-        Some("ab59719d5042426cb1328af7a740889a71134fad0309f9f500d084cd23392325")
+        Some("c22d61fc00d68083a01bc20c607423e015b9aeb862bbcdf7681b07848368221b")
     );
     assert_eq!(
         manifest["artifact"]["program_id_words"]
