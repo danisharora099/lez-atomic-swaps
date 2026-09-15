@@ -3,10 +3,10 @@ program = "zec_escrow_v02"
 artifact_status = "locally-built-artifact-checked"
 
 [source]
-lez_tag = "v0.2.0"
-lez_commit = "a58fbce2ff48c58b7bb5001b1a27e64b9596ee3a"
-spel_pr = 238
-spel_commit = "df17acd98436be4f09c55877dae1fe2e73cbcdca"
+lez_tag = "v0.2.4"
+lez_commit = "47eba256479f6f785acbd138834340703cd03401"
+spel_pr = 256
+spel_commit = "7f13e71f91372a32e26b71d19dbbb60532711048"
 risc0_version = "3.0.5"
 risc0_guest_builder = "risczero/risc0-guest-builder:r0.1.94.1@sha256:c2f63fdd720337c0727e05c5e1733083baba04c00a864a89b0e3f4f8d92617be"
 

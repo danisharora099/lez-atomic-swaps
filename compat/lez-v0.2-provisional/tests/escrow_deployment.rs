@@ -160,14 +160,14 @@ fn v02_escrow_guest_generated_client_and_deployment_inputs_exist() {
     let manifest: toml::Value = include_str!("../escrow/methods/guest/deployment-manifest.toml")
         .parse()
         .expect("deployment manifest must be valid TOML");
-    assert_eq!(manifest["source"]["lez_tag"].as_str(), Some("v0.2.0"));
+    assert_eq!(manifest["source"]["lez_tag"].as_str(), Some("v0.2.4"));
     assert_eq!(
         manifest["source"]["lez_commit"].as_str(),
-        Some("a58fbce2ff48c58b7bb5001b1a27e64b9596ee3a")
+        Some("47eba256479f6f785acbd138834340703cd03401")
     );
     assert_eq!(
         manifest["source"]["spel_commit"].as_str(),
-        Some("df17acd98436be4f09c55877dae1fe2e73cbcdca")
+        Some("7f13e71f91372a32e26b71d19dbbb60532711048")
     );
     assert_eq!(
         manifest["target"]["rpc_url"].as_str(),

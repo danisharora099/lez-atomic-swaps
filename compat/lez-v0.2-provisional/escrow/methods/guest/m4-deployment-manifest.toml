@@ -5,9 +5,9 @@ artifact_status = "local-checked-artifact"
 public_deployment = false
 
 [source]
-lez_tag = "v0.2.0"
-lez_commit = "a58fbce2ff48c58b7bb5001b1a27e64b9596ee3a"
-spel_commit = "df17acd98436be4f09c55877dae1fe2e73cbcdca"
+lez_tag = "v0.2.4"
+lez_commit = "47eba256479f6f785acbd138834340703cd03401"
+spel_commit = "7f13e71f91372a32e26b71d19dbbb60532711048"
 contract_sha256 = "ee3bf98ee33f39071db3ae56c2efdc629370744274b6bdc4f79e11d3bfd56f34"
 guest_manifest_sha256 = "ad2d8d2c16d7c785c813c11e8a4fa96ede4d94de8acbe2684779d1e8d1d3a412"
 guest_lock_sha256 = "a583b83d3ae19f8bce44b925c6baccea931fe25d5518605e1d90d03ec7cb3ed0"
