@@ -13,7 +13,12 @@ for file in apps/basecamp/common/qml/*.qml; do kit+=("$(basename "$file")"); don
 status=0
 for archive in "$@"; do
   entries="$(tar -tzf "$archive")"
-  variants="$(printf '%s\n' "$entries" | sed -n 's|^variants/\([^/]*\)/qml/Main\.qml$|\1|p')"
+  # Plain bash: the pinned Nix CI image has no sed or awk.
+  variants=""
+  while IFS= read -r entry; do
+    [[ "$entry" =~ ^variants/([^/]+)/qml/Main\.qml$ ]] && variants+="${BASH_REMATCH[1]}"$'\n'
+  done <<< "$entries"
+  variants="${variants%$'\n'}"
   if [[ -z "$variants" ]]; then
     echo "$archive: no variant carries qml/Main.qml" >&2
     status=1
