@@ -77,6 +77,7 @@ if [[ "$btc_lifecycle_ready" == 1 ]]; then
     --arg sequencer "$sequencer_url" --arg indexer "$indexer_url" --argjson port_base "$sidecar_port_base" \
     --arg signer "$btc_state/lez-signer.key" \
     --arg actor "$actor_program" --arg actor_sha "$actor_sha" \
+    --arg btc_network "${LEZ_BTC_NETWORK:-regtest}" \
     --argjson csv "${LEZ_BTC_REFUND_CSV_BLOCKS:-144}" \
     --argjson cutoff "${LEZ_BTC_MAKER_LOCK_CUTOFF_SECONDS:-1800}" \
     --argjson earlier "${LEZ_BTC_EARLIER_REFUND_SECONDS:-3600}" \
@@ -84,7 +85,7 @@ if [[ "$btc_lifecycle_ready" == 1 ]]; then
     --argjson margin "${LEZ_BTC_REFUND_MARGIN_SECONDS:-300}" \
     --argjson discovery "${LEZ_LEZ_DISCOVERY_MAX_BLOCKS:-2048}" '
     {schema_version:1, swaps_root:$swaps,
-     bitcoin:{network:"regtest", endpoint:"http://127.0.0.1:18443/", cookie_file:$cookie, wallet:$wallet,
+     bitcoin:{network:$btc_network, endpoint:"http://127.0.0.1:18443/", cookie_file:$cookie, wallet:$wallet,
               genesis_block_hash:$btc_genesis, required_confirmations:1, refund_csv_blocks:$csv, claim_fee_sat:1000},
      lez:{channel_id:$channel, genesis_block_hash:$genesis, escrow_program_id:$program,
           authenticated_transfer_program_id:$transfer, sidecar_program:$sidecar_program,
