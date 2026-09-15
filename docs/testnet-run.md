@@ -137,3 +137,30 @@ wallet pinata claim --to Public/<account id>      # 150 LEZ per claim, no captch
 `All pollers failed` from the wallet is a poll timeout; confirm with the
 sequencer's `getAccount` or the explorer
 (`https://explorer.testnet.lez.logos.co/account/<id>`).
+
+## 7. The escrow program
+
+The official sequencer admits at most **614,200 bytes** per transaction, and a
+program deployment carries the whole risc0 program binary. The escrow guest
+built with default settings is 685,524 bytes: 198 KB of it are symbol and
+string tables the zkVM never loads. The guest crate therefore strips symbols
+in its release profile (`escrow/methods/guest/Cargo.toml`); the loaded image,
+and so the ImageID, does not depend on them.
+
+Deploy through the sequencer proxy's network namespace, where
+`http://127.0.0.1:3040/` is the official sequencer, which is the only kind of
+endpoint the deployer accepts:
+
+```sh
+docker run --rm --network container:lez-testnet-sequencer \
+  -v <dir with lez-zec-escrow-v02-deployer>:/deployer:ro -v ~/lez-testnet/market/bootstrap:/out \
+  lez-builder:local bash -c '/deployer/lez-zec-escrow-v02-deployer deploy-m4-local \
+    --rpc-url http://127.0.0.1:3040/ \
+    --channel-id 0101010101010101010101010101010101010101010101010101010101010101 \
+    --timeout-seconds 900 > /out/deployment.json'
+```
+
+Its preflight checks the channel and the live builtin program ids
+(`authenticated_transfer` `fe96c422…`, `token` `ccc4713e…`, and the
+associated-token-account ImageID `9df1315d…`, which `getProgramIds` omits)
+before it submits anything.
