@@ -26,7 +26,11 @@ jobs:
 
   dco:
     name: developer certificate of origin
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    # Pull requests only: every commit of a PR is checked there. A push to main
+    # is GitHub's squash of that PR, authored with the merger's noreply address
+    # while the sign-offs carry the real one, so the author-matching rule would
+    # fail on every merge without checking anything new.
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
