@@ -142,7 +142,7 @@ impl RpcServer for MockNode {
     async fn get_transaction(
         &self,
         _transaction_hash: HashType,
-    ) -> Result<Option<LeeTransaction>, ErrorObjectOwned> {
+    ) -> Result<Option<(LeeTransaction, BlockId)>, ErrorObjectOwned> {
         self.record_call();
         Ok(None)
     }
