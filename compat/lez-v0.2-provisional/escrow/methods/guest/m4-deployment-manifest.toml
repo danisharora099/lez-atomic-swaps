@@ -27,8 +27,8 @@ circuits_version = "v0.4.2"
 circuits_sha256 = "e9131ffac8b08a80e1a7152b34fdd5d5c52674d4cb396e8162131ca5dd7c858d"
 
 [artifact]
-elf_sha256 = "237037e1a54187697e7e67a9bf589dfb3eb88c475c7f9b62eb2396144e87c6d0"
-image_id = "431ab9aec4b21d66e88ecbf8bb83301d5ef4cc0cec0ba0fb76baaa0ac7f9a10b"
+elf_sha256 = "2eb04d0b0bbc4feb92f4d30f50a52f072c63ea98ffa9ce105856115b2e409d04"
+image_id = "ab59719d5042426cb1328af7a740889a71134fad0309f9f500d084cd23392325"
 fresh_docker_embedding_required = true
 run_owned_target_required = true
 

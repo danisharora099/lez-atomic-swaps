@@ -279,10 +279,10 @@ require_fixed 'export RISC0_DOCKER_CONTAINER_TAG="$risc0_guest_builder_tag"' "$p
 require_fixed 'risc0_build::embed_methods_with_options' "$provisional_methods_build"
 require_fixed 'r0.1.94.1@sha256:c2f63fdd720337c0727e05c5e1733083baba04c00a864a89b0e3f4f8d92617be' "$provisional_methods_build"
 require_fixed '.root_dir("../..")' "$provisional_methods_build"
-require_fixed 'expected_elf_sha256="237037e1a54187697e7e67a9bf589dfb3eb88c475c7f9b62eb2396144e87c6d0"' "$provisional_verifier"
-require_fixed 'expected_image_id="431ab9aec4b21d66e88ecbf8bb83301d5ef4cc0cec0ba0fb76baaa0ac7f9a10b"' "$provisional_verifier"
-require_fixed 'elf_sha256 = "237037e1a54187697e7e67a9bf589dfb3eb88c475c7f9b62eb2396144e87c6d0"' "$provisional_artifact_manifest"
-require_fixed 'image_id = "431ab9aec4b21d66e88ecbf8bb83301d5ef4cc0cec0ba0fb76baaa0ac7f9a10b"' "$provisional_artifact_manifest"
+require_fixed 'expected_elf_sha256="2eb04d0b0bbc4feb92f4d30f50a52f072c63ea98ffa9ce105856115b2e409d04"' "$provisional_verifier"
+require_fixed 'expected_image_id="ab59719d5042426cb1328af7a740889a71134fad0309f9f500d084cd23392325"' "$provisional_verifier"
+require_fixed 'elf_sha256 = "2eb04d0b0bbc4feb92f4d30f50a52f072c63ea98ffa9ce105856115b2e409d04"' "$provisional_artifact_manifest"
+require_fixed 'image_id = "ab59719d5042426cb1328af7a740889a71134fad0309f9f500d084cd23392325"' "$provisional_artifact_manifest"
 if rg -Fq 'risc0_build::embed_methods();' "$provisional_methods_build"; then
   fail "v0.2 methods must embed the canonical Docker-built guest"
 fi
