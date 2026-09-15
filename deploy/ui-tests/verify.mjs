@@ -285,7 +285,8 @@ async function publishOfferOnce(app, predicate) {
   for (const [field, value, property] of makerTerms) await setText(app, field, value, property);
   await new Promise((r) => setTimeout(r, 300));
   const rate = await property(app, "makerRate", "text");
-  if (rate !== "1 BTC = 100,000 LEZ") throw new Error(`offer form quotes ${rate} for the typed terms`);
+  const quotedRate = `1 BTC = ${(Number(lezAmount) * 1e8 / Math.round(Number(btcAmount) * 1e8)).toLocaleString("en-US", { maximumFractionDigits: 8 })} LEZ`;
+  if (rate !== quotedRate) throw new Error(`offer form quotes ${rate} for the typed terms, expected ${quotedRate}`);
   const before = await property(app, "makerOutput", "text");
   const publish = await app.findByProperty("objectName", "makerCreateOffers");
   if (publish.matches?.length !== 1) throw new Error("Publish offer button not found");
