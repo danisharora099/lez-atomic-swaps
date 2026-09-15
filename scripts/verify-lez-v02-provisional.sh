@@ -9,7 +9,7 @@ guest_manifest="compat/lez-v0.2-provisional/escrow/methods/guest/Cargo.toml"
 deployer_manifest="compat/lez-v0.2-provisional/escrow/deployer/Cargo.toml"
 artifact_manifest="compat/lez-v0.2-provisional/escrow/methods/guest/deployment-manifest.toml"
 spel_commit="7f13e71f91372a32e26b71d19dbbb60532711048"
-lez_commit="a58fbce2ff48c58b7bb5001b1a27e64b9596ee3a"
+lez_commit="47eba256479f6f785acbd138834340703cd03401"
 compat_test_sha256="e5320fc8a6172755cca312409e120ee4dd4837f21274e3be7f3f383006eb52d1"
 risc0_version="3.0.5"
 risc0_rust_version="1.94.1"
@@ -278,8 +278,8 @@ rg -Fq "?rev=${spel_commit}#${spel_commit}" "$lockfile" || {
   echo "provisional lockfile did not resolve exact SPEL PR head ${spel_commit}" >&2
   exit 1
 }
-rg -Fq "?tag=v0.2.0#${lez_commit}" "$lockfile" || {
-  echo "provisional lockfile did not resolve LEZ v0.2.0 to ${lez_commit}" >&2
+rg -Fq "?tag=v0.2.4#${lez_commit}" "$lockfile" || {
+  echo "provisional lockfile did not resolve LEZ v0.2.4 to ${lez_commit}" >&2
   exit 1
 }
 if rg -q 'logos-execution-zone\.git\?rev=' "$lockfile"; then
@@ -287,7 +287,7 @@ if rg -q 'logos-execution-zone\.git\?rev=' "$lockfile"; then
   exit 1
 fi
 while IFS= read -r source; do
-  if [[ "$source" != *"?tag=v0.2.0#${lez_commit}"* ]]; then
+  if [[ "$source" != *"?tag=v0.2.4#${lez_commit}"* ]]; then
     echo "unexpected LEZ source identity: ${source}" >&2
     exit 1
   fi
@@ -302,8 +302,8 @@ check_locked_sources() {
     echo "missing independently locked ${label} graph: ${nested_lockfile}" >&2
     exit 1
   }
-  rg -Fq "?tag=v0.2.0#${lez_commit}" "$nested_lockfile" || {
-    echo "${label} lockfile did not resolve LEZ v0.2.0 to ${lez_commit}" >&2
+  rg -Fq "?tag=v0.2.4#${lez_commit}" "$nested_lockfile" || {
+    echo "${label} lockfile did not resolve LEZ v0.2.4 to ${lez_commit}" >&2
     exit 1
   }
   if rg -q 'logos-execution-zone\.git\?rev=' "$nested_lockfile"; then
@@ -311,7 +311,7 @@ check_locked_sources() {
     exit 1
   fi
   while IFS= read -r source; do
-    if [[ "$source" != *"?tag=v0.2.0#${lez_commit}"* ]]; then
+    if [[ "$source" != *"?tag=v0.2.4#${lez_commit}"* ]]; then
       echo "unexpected ${label} LEZ source identity: ${source}" >&2
       exit 1
     fi
