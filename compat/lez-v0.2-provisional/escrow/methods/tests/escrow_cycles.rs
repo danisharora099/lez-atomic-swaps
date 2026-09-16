@@ -69,8 +69,9 @@ fn actor(secret: [u8; 32]) -> (AccountId, PrivateKey) {
 fn aggregate() -> Aggregate {
     let maker_secret = Scalar::from_slice(&MAKER_SECRET).expect("maker scalar");
     let taker_secret = Scalar::from_slice(&TAKER_SECRET).expect("taker scalar");
-    let context = KeyAggContext::new([maker_secret.base_point_mul(), taker_secret.base_point_mul()])
-        .expect("BIP-327 two-party key aggregation");
+    let context =
+        KeyAggContext::new([maker_secret.base_point_mul(), taker_secret.base_point_mul()])
+            .expect("BIP-327 two-party key aggregation");
     let point: Point = context.aggregated_pubkey();
     let public_key =
         PublicKey::try_new(point.serialize_xonly()).expect("MuSig2 aggregate is a BIP-340 key");
@@ -203,7 +204,10 @@ fn cycles<T: Serialize>(
 }
 
 #[test]
-#[expect(clippy::too_many_lines, reason = "one linear measurement per operation")]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one linear measurement per operation"
+)]
 fn escrow_operations_report_executor_cycles_for_the_deployed_program() {
     let escrow = Program::new(ZEC_ESCROW_V02_ELF.into()).expect("canonical guest ELF");
     assert_eq!(escrow.id(), ZEC_ESCROW_V02_ID);
@@ -249,7 +253,13 @@ fn escrow_operations_report_executor_cycles_for_the_deployed_program() {
         refund_at: REFUND_AT,
         authenticated_transfer_program: authenticated_transfer_id,
     };
-    let initialize_accounts = vec![metadata_id, custody, depositor, claimant, aggregate.authority];
+    let initialize_accounts = vec![
+        metadata_id,
+        custody,
+        depositor,
+        claimant,
+        aggregate.authority,
+    ];
     let (initialize_cycles, initialize_segments) =
         cycles(&state, &initialize_accounts, &[depositor], &initialize);
     state
@@ -288,12 +298,8 @@ fn escrow_operations_report_executor_cycles_for_the_deployed_program() {
     // Claim and refund are alternative endings, so each runs on the funded state.
     let claim = EscrowInstruction::ClaimNativeWitnessed { swap_id: SWAP_ID };
     let claim_accounts = vec![metadata_id, custody, claimant, aggregate.authority];
-    let (claim_cycles, claim_segments) = cycles(
-        &state,
-        &claim_accounts,
-        &[aggregate.authority],
-        &claim,
-    );
+    let (claim_cycles, claim_segments) =
+        cycles(&state, &claim_accounts, &[aggregate.authority], &claim);
     let claim_message = Message::try_new(
         ZEC_ESCROW_V02_ID,
         claim_accounts,
@@ -333,7 +339,10 @@ fn escrow_operations_report_executor_cycles_for_the_deployed_program() {
     );
 
     println!("\nescrow executor cycles (ImageID {DEPLOYED_IMAGE_ID})");
-    println!("{:<26} {:>12} {:>10}", "operation", "user cycles", "segments");
+    println!(
+        "{:<26} {:>12} {:>10}",
+        "operation", "user cycles", "segments"
+    );
     for (name, count, segments) in [
         (
             "InitializeNativeWitnessed",
