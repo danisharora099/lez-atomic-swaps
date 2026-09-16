@@ -26,8 +26,15 @@ fn isolated_config(home: PathBuf) -> SequencerConfig {
             channel_id: [0; 32].into(),
             node_url: "http://127.0.0.1:1".parse().expect("static URL"),
             auth: None,
+            funding_key: serde_json::from_str(
+                "\"2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26\"",
+            )
+            .expect("static funding key"),
+            priority_fee: 0,
         },
         genesis: vec![],
+        cross_zone: None,
+        metrics_address: None,
     }
 }
 
@@ -54,7 +61,7 @@ fn exact_pr_head_compiles_with_v0_2_standalone_config_and_lee_pdas() {
 
     // Constructing (but deliberately not polling) this future proves the exact
     // standalone entry point compiles without binding a port or starting tasks.
-    let standalone = sequencer_service::run(config, 0);
+    let standalone = sequencer_service::run(config, "127.0.0.1:0".parse().expect("static address"));
     drop(standalone);
 
     // Keep the renamed transaction envelope visible in this compatibility seam.
