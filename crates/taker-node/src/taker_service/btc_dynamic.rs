@@ -393,6 +393,10 @@ pub(super) async fn prepare(
                 bitcoin: *dynamic.runtime.bitcoin_policy(),
                 lez: *dynamic.runtime.lez_identity(),
                 lez_owner_account: dynamic.runtime.lez_owner_account(),
+                bitcoin_claim_destination: dynamic
+                    .runtime
+                    .bitcoin_claim_destination()
+                    .map(<[u8]>::to_vec),
                 expires_at_unix_seconds: offer.offer().expires_at_unix_seconds(),
             },
             None,

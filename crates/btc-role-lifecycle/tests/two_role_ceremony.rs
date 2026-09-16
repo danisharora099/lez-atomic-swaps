@@ -62,6 +62,7 @@ fn bootstrap_input(role: Participant, owner: u8) -> RoleBootstrapInput {
         ),
         lez: BtcLezChainIdentityV1::new([0x22; 32], [0x23; 32], [0x24; 32], [0x25; 32]),
         lez_owner_account: [owner; 32],
+        bitcoin_claim_destination: None,
         expires_at_unix_seconds: 2_000_000_000,
     }
 }

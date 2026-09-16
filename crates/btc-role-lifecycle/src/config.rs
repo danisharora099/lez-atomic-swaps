@@ -62,6 +62,10 @@ pub struct BitcoinConfigV1 {
     /// Bitcoin. Absent when the role never funds Bitcoin.
     #[serde(default)]
     pub wallet: Option<String>,
+    /// Absent, payouts land on a per-swap key Core cannot see or spend.
+    /// The two roles must not share an address: the agreement rejects that.
+    #[serde(default)]
+    pub claim_destination_address: Option<String>,
     /// Expected genesis block hash as Core displays it (`getblockhash 0`).
     pub genesis_block_hash: String,
     pub required_confirmations: u32,
@@ -134,6 +138,7 @@ pub struct BtcRoleRuntime {
     bitcoin_policy: BtcChainPolicyV1,
     lez_identity: BtcLezChainIdentityV1,
     lez_owner_account: [u8; 32],
+    bitcoin_claim_destination: Option<Vec<u8>>,
 }
 
 impl BtcRoleRuntime {
@@ -205,6 +210,21 @@ impl BtcRoleRuntime {
         );
         let signer = lez::read_hex_secret(&config.lez.signer_key_file).context("LEZ signer key")?;
         let lez_owner_account = lez::signer_account(&signer)?;
+        // Catch a wrong-network address here, not inside a signed agreement.
+        let bitcoin_claim_destination = config
+            .bitcoin
+            .claim_destination_address
+            .as_deref()
+            .map(|address| {
+                let parsed = address
+                    .parse::<bitcoin::Address<bitcoin::address::NetworkUnchecked>>()
+                    .context("bitcoin.claim_destination_address")?;
+                let checked = parsed
+                    .require_network(config.bitcoin.network.network())
+                    .context("bitcoin.claim_destination_address is for another network")?;
+                Ok::<_, anyhow::Error>(checked.script_pubkey().into_bytes())
+            })
+            .transpose()?;
         ensure!(
             config.lez.sidecar_port_count > 0,
             "sidecar_port_count must be nonzero"
@@ -219,6 +239,7 @@ impl BtcRoleRuntime {
             bitcoin_policy,
             lez_identity,
             lez_owner_account,
+            bitcoin_claim_destination,
         })
     }
 
@@ -245,6 +266,12 @@ impl BtcRoleRuntime {
     #[must_use]
     pub const fn lez_owner_account(&self) -> [u8; 32] {
         self.lez_owner_account
+    }
+
+    /// `None` leaves the bootstrap to mint a per-swap key.
+    #[must_use]
+    pub fn bitcoin_claim_destination(&self) -> Option<&[u8]> {
+        self.bitcoin_claim_destination.as_deref()
     }
 
     #[must_use]
