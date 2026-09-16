@@ -7,34 +7,34 @@ mod generated_client {
 }
 
 const EXPECTED_AUTHENTICATED_TRANSFER: [i64; 8] = [
-    3_170_810_844,
-    2_526_647_253,
-    999_807_262,
-    1_205_602_179,
-    3_401_962_591,
-    3_484_055_895,
-    2_106_546_407,
-    1_900_691_388,
+    583_309_054,
+    2_344_528_779,
+    3_806_558_405,
+    2_890_696_795,
+    2_257_354_672,
+    3_978_764_116,
+    2_273_929_063,
+    1_518_858_078,
 ];
 const EXPECTED_TOKEN: [i64; 8] = [
-    2_282_739_141,
-    348_907_455,
-    1_046_946_228,
-    3_735_699_860,
-    585_462_133,
-    3_426_087_150,
-    772_528_164,
-    2_090_518_099,
+    1_047_643_340,
+    4_291_649_067,
+    2_093_396_023,
+    4_016_657_193,
+    3_904_308_476,
+    481_382_041,
+    2_987_082_047,
+    2_603_530_278,
 ];
 const EXPECTED_ASSOCIATED_TOKEN_ACCOUNT: [i64; 8] = [
-    3_357_312_149,
-    3_615_960_253,
-    3_351_583_505,
-    2_234_166_003,
-    4_153_433_811,
-    2_743_238_177,
-    2_886_052_503,
-    4_160_755_157,
+    1_563_554_205,
+    697_904_783,
+    2_702_216_093,
+    2_965_692_927,
+    3_153_221_855,
+    2_812_443_166,
+    1_620_412_227,
+    3_110_729_199,
 ];
 
 #[test]
@@ -82,7 +82,7 @@ fn v02_escrow_guest_generated_client_and_deployment_inputs_exist() {
         .client_code;
     let generated_client_sha256 = hex::encode(Sha256::digest(generated.as_bytes()));
     assert_eq!(
-        generated_client_sha256, "bcc0d3898343317bdd3bcc0987ec9559db7f4060c4e9fb45f096d1bcd34b48ac",
+        generated_client_sha256, "20d9cd5721bc0121fd21954e9826b219e0050c33a5d599992c170ef7c5da8c72",
         "the generated client changed without an explicit ABI review"
     );
     let funding = generated_method(&generated, "fund_token", Some("claim_token"));
@@ -160,14 +160,14 @@ fn v02_escrow_guest_generated_client_and_deployment_inputs_exist() {
     let manifest: toml::Value = include_str!("../escrow/methods/guest/deployment-manifest.toml")
         .parse()
         .expect("deployment manifest must be valid TOML");
-    assert_eq!(manifest["source"]["lez_tag"].as_str(), Some("v0.2.0"));
+    assert_eq!(manifest["source"]["lez_tag"].as_str(), Some("v0.2.4"));
     assert_eq!(
         manifest["source"]["lez_commit"].as_str(),
-        Some("a58fbce2ff48c58b7bb5001b1a27e64b9596ee3a")
+        Some("47eba256479f6f785acbd138834340703cd03401")
     );
     assert_eq!(
         manifest["source"]["spel_commit"].as_str(),
-        Some("df17acd98436be4f09c55877dae1fe2e73cbcdca")
+        Some("7f13e71f91372a32e26b71d19dbbb60532711048")
     );
     assert_eq!(
         manifest["target"]["rpc_url"].as_str(),
@@ -198,7 +198,7 @@ fn v02_escrow_guest_generated_client_and_deployment_inputs_exist() {
     }
     assert_eq!(
         manifest["target"]["associated_token_account_identity_source"].as_str(),
-        Some("lez-v0.2.0-checked-elf-rpc-map-omits-key")
+        Some("lez-v0.2.4-checked-elf-rpc-map-omits-key")
     );
     assert_eq!(
         manifest["artifact_status"].as_str(),
@@ -206,11 +206,11 @@ fn v02_escrow_guest_generated_client_and_deployment_inputs_exist() {
     );
     assert_eq!(
         manifest["artifact"]["elf_sha256"].as_str(),
-        Some("237037e1a54187697e7e67a9bf589dfb3eb88c475c7f9b62eb2396144e87c6d0")
+        Some("3d49502421a5705b2c386bde8d3a439914196f0727169a98794932c14b9777d4")
     );
     assert_eq!(
         manifest["artifact"]["image_id"].as_str(),
-        Some("431ab9aec4b21d66e88ecbf8bb83301d5ef4cc0cec0ba0fb76baaa0ac7f9a10b")
+        Some("c22d61fc00d68083a01bc20c607423e015b9aeb862bbcdf7681b07848368221b")
     );
     assert_eq!(
         manifest["artifact"]["program_id_words"]
@@ -220,14 +220,14 @@ fn v02_escrow_guest_generated_client_and_deployment_inputs_exist() {
             .map(|word| word.as_integer().expect("ProgramId word"))
             .collect::<Vec<_>>(),
         vec![
-            2_931_366_467,
-            1_713_222_340,
-            4_174_089_960,
-            489_718_715,
-            214_758_494,
-            4_221_570_028,
-            178_961_014,
-            195_164_615,
+            4_234_227_138,
+            2_206_258_688,
+            214_047_648,
+            3_760_419_936,
+            3_098_458_389,
+            4_157_455_202,
+            2_215_058_280,
+            455_239_811,
         ]
     );
     assert_eq!(
@@ -236,7 +236,7 @@ fn v02_escrow_guest_generated_client_and_deployment_inputs_exist() {
     );
     assert_eq!(
         manifest["interface"]["generated_client_sha256"].as_str(),
-        Some("bcc0d3898343317bdd3bcc0987ec9559db7f4060c4e9fb45f096d1bcd34b48ac")
+        Some("20d9cd5721bc0121fd21954e9826b219e0050c33a5d599992c170ef7c5da8c72")
     );
     assert_eq!(
         manifest["interface"]["instruction_count"].as_integer(),

@@ -721,7 +721,7 @@ impl OfficialNodeRpc {
             .map_err(|_| RuntimeBoundaryError::NodeUnavailable)?;
         match observed {
             None => Ok(false),
-            Some(observed) if observed == expected => Ok(true),
+            Some((observed, _block_id)) if observed == expected => Ok(true),
             Some(_) => Err(RuntimeBoundaryError::WrongIncludedTransaction),
         }
     }

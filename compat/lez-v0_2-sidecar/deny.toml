@@ -37,7 +37,7 @@ exceptions = [
 ]
 
 [[licenses.clarify]]
-crate = "spel-framework@0.5.0"
+crate = "spel-framework@0.6.0"
 expression = "MIT OR Apache-2.0"
 license-files = [
     { path = "../LICENSE-MIT", hash = 0x6193b12d },
@@ -45,7 +45,7 @@ license-files = [
 ]
 
 [[licenses.clarify]]
-crate = "spel-framework-core@0.5.0"
+crate = "spel-framework-core@0.6.0"
 expression = "MIT OR Apache-2.0"
 license-files = [
     { path = "../LICENSE-MIT", hash = 0x6193b12d },
@@ -53,7 +53,7 @@ license-files = [
 ]
 
 [[licenses.clarify]]
-crate = "spel-framework-macros@0.5.0"
+crate = "spel-framework-macros@0.6.0"
 expression = "MIT OR Apache-2.0"
 license-files = [
     { path = "../LICENSE-MIT", hash = 0x6193b12d },
@@ -69,6 +69,7 @@ unknown-git = "deny"
 unknown-registry = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = [
+    "https://github.com/keycard-tech/keycard-rs",
     "https://github.com/EspressoSystems/jellyfish",
     "https://github.com/arkworks-rs/spongefish.git",
     "https://github.com/logos-blockchain/logos-blockchain-circuits.git",
