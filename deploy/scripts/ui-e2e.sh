@@ -70,6 +70,11 @@ ui() { # ui <role> [ENV=VALUE...]
   # cannot.
   [[ -z "${LEZ_UI_LEZ_AMOUNT:-}" ]] || envs+=(-e "LEZ_UI_LEZ_AMOUNT=$LEZ_UI_LEZ_AMOUNT")
   [[ -z "${LEZ_UI_BTC_AMOUNT:-}" ]] || envs+=(-e "LEZ_UI_BTC_AMOUNT=$LEZ_UI_BTC_AMOUNT")
+  # How long a desk waits for the Node to reach the next state. verify.mjs defaults to
+  # 30 minutes, which is barely 1.5 testnet4 block intervals and does time out on the
+  # public networks, so docs/testnet-run.md tells the operator to raise it. That only
+  # works if it crosses into the container.
+  [[ -z "${INTERACTIVE_TIMEOUT_MS:-}" ]] || envs+=(-e "INTERACTIVE_TIMEOUT_MS=$INTERACTIVE_TIMEOUT_MS")
   for kv in "$@"; do envs+=(-e "$kv"); done
   if [[ "$record" == 1 ]]; then
     segment_index=$((segment_index + 1))
