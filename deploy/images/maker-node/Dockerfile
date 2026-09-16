@@ -18,7 +18,7 @@ LABEL org.logos-co.atomic-swaps.purpose="local-maker-node"
 
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl jq procps socat tini \
+        ca-certificates curl jq libpcsclite1 procps socat tini \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=strip --chmod=0555 /payload/lez-maker-node /usr/local/bin/lez-maker-node

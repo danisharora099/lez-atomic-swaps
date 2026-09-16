@@ -8,18 +8,18 @@ methods_manifest="compat/lez-v0.2-provisional/escrow/methods/Cargo.toml"
 guest_manifest="compat/lez-v0.2-provisional/escrow/methods/guest/Cargo.toml"
 deployer_manifest="compat/lez-v0.2-provisional/escrow/deployer/Cargo.toml"
 artifact_manifest="compat/lez-v0.2-provisional/escrow/methods/guest/deployment-manifest.toml"
-spel_commit="df17acd98436be4f09c55877dae1fe2e73cbcdca"
-lez_commit="a58fbce2ff48c58b7bb5001b1a27e64b9596ee3a"
-compat_test_sha256="e5320fc8a6172755cca312409e120ee4dd4837f21274e3be7f3f383006eb52d1"
+spel_commit="7f13e71f91372a32e26b71d19dbbb60532711048"
+lez_commit="47eba256479f6f785acbd138834340703cd03401"
+compat_test_sha256="542f1a8a9ce00ec2c83f92287ac210719245e4b8502122bef4d2e65289c601d9"
 risc0_version="3.0.5"
 risc0_rust_version="1.94.1"
 rzup_version="0.5.1"
 circuits_version="v0.4.2"
 circuits_sha256="e9131ffac8b08a80e1a7152b34fdd5d5c52674d4cb396e8162131ca5dd7c858d"
-expected_elf_sha256="237037e1a54187697e7e67a9bf589dfb3eb88c475c7f9b62eb2396144e87c6d0"
-expected_image_id="431ab9aec4b21d66e88ecbf8bb83301d5ef4cc0cec0ba0fb76baaa0ac7f9a10b"
+expected_elf_sha256="3d49502421a5705b2c386bde8d3a439914196f0727169a98794932c14b9777d4"
+expected_image_id="c22d61fc00d68083a01bc20c607423e015b9aeb862bbcdf7681b07848368221b"
 expected_idl_sha256="04895050affb173d3e87329994ecbbed54781a38d5454ce5b36e155916e4134f"
-expected_generated_client_sha256="bcc0d3898343317bdd3bcc0987ec9559db7f4060c4e9fb45f096d1bcd34b48ac"
+expected_generated_client_sha256="20d9cd5721bc0121fd21954e9826b219e0050c33a5d599992c170ef7c5da8c72"
 risc0_guest_builder_tag="r0.1.94.1@sha256:c2f63fdd720337c0727e05c5e1733083baba04c00a864a89b0e3f4f8d92617be"
 risc0_guest_builder="risczero/risc0-guest-builder:${risc0_guest_builder_tag}"
 run_id="${RUN_ID:-local-$$}"
@@ -278,8 +278,8 @@ rg -Fq "?rev=${spel_commit}#${spel_commit}" "$lockfile" || {
   echo "provisional lockfile did not resolve exact SPEL PR head ${spel_commit}" >&2
   exit 1
 }
-rg -Fq "?tag=v0.2.0#${lez_commit}" "$lockfile" || {
-  echo "provisional lockfile did not resolve LEZ v0.2.0 to ${lez_commit}" >&2
+rg -Fq "?tag=v0.2.4#${lez_commit}" "$lockfile" || {
+  echo "provisional lockfile did not resolve LEZ v0.2.4 to ${lez_commit}" >&2
   exit 1
 }
 if rg -q 'logos-execution-zone\.git\?rev=' "$lockfile"; then
@@ -287,7 +287,7 @@ if rg -q 'logos-execution-zone\.git\?rev=' "$lockfile"; then
   exit 1
 fi
 while IFS= read -r source; do
-  if [[ "$source" != *"?tag=v0.2.0#${lez_commit}"* ]]; then
+  if [[ "$source" != *"?tag=v0.2.4#${lez_commit}"* ]]; then
     echo "unexpected LEZ source identity: ${source}" >&2
     exit 1
   fi
@@ -302,8 +302,8 @@ check_locked_sources() {
     echo "missing independently locked ${label} graph: ${nested_lockfile}" >&2
     exit 1
   }
-  rg -Fq "?tag=v0.2.0#${lez_commit}" "$nested_lockfile" || {
-    echo "${label} lockfile did not resolve LEZ v0.2.0 to ${lez_commit}" >&2
+  rg -Fq "?tag=v0.2.4#${lez_commit}" "$nested_lockfile" || {
+    echo "${label} lockfile did not resolve LEZ v0.2.4 to ${lez_commit}" >&2
     exit 1
   }
   if rg -q 'logos-execution-zone\.git\?rev=' "$nested_lockfile"; then
@@ -311,7 +311,7 @@ check_locked_sources() {
     exit 1
   fi
   while IFS= read -r source; do
-    if [[ "$source" != *"?tag=v0.2.0#${lez_commit}"* ]]; then
+    if [[ "$source" != *"?tag=v0.2.4#${lez_commit}"* ]]; then
       echo "unexpected ${label} LEZ source identity: ${source}" >&2
       exit 1
     fi

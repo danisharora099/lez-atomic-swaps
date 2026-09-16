@@ -26,3 +26,4 @@ f5a9caa66b04b0bec1a86cb732f5a64f63852e6e:scripts/run-bitcoin-core-e2e.sh:generic
 b04df3599a9219be47cbd72c725f34f81b05ec4e:scripts/run-lez-v02-stack.sh:generic-api-key:12
 b04df3599a9219be47cbd72c725f34f81b05ec4e:scripts/run-lez-v02-stack.sh:generic-api-key:13
 49e3897b9916f3b2509ead41c0877c3df1e09136:tests/e2e/monero/provenance.env:generic-api-key:14
+eae01e88bf88471250a8d5762052d771368fca50:deploy/scripts/market-bootstrap.sh:generic-api-key:19

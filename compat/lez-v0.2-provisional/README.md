@@ -9,7 +9,7 @@ unreviewed SPEL pin or the Logos-owned dependency exceptions below.
 
 | Upstream | Immutable identity | Review status |
 |---|---|---|
-| SPEL PR [#238](https://github.com/logos-co/spel/pull/238) | head `df17acd98436be4f09c55877dae1fe2e73cbcdca` | Open, unmerged, and without a submitted maintainer review |
+| SPEL PR [#256](https://github.com/logos-co/spel/pull/256) | merged commit `7f13e71f91372a32e26b71d19dbbb60532711048` (LEZ v0.2.4 migration) | Merged |
 | LEZ | tag `v0.2.0`, commit `a58fbce2ff48c58b7bb5001b1a27e64b9596ee3a` | Official stable release |
 
 PR #238 declares LEZ by tag. All direct LEZ dependencies use that same tag so
