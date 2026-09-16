@@ -63,6 +63,13 @@ stop_node() { stopped_node="$1"; docker stop "$1" >/dev/null; }
 start_node() { docker start "$1" >/dev/null; stopped_node=""; wait_healthy "$1"; }
 ui() { # ui <role> [ENV=VALUE...]
   local role="$1"; shift; local envs=(-e "M3_UI_DIRECTION=$direction" -e "DESK_DEBUG=${DESK_DEBUG:-0}")
+  # verify.mjs reads the trade size from these, so they have to cross into the
+  # container: the desks run inside it. Unset means the local stack's defaults
+  # (1000 LEZ, 0.01 BTC); the public testnets pass smaller amounts, which is the
+  # difference between a Maker BTC reservation that fits its wallet and one that
+  # cannot.
+  [[ -z "${LEZ_UI_LEZ_AMOUNT:-}" ]] || envs+=(-e "LEZ_UI_LEZ_AMOUNT=$LEZ_UI_LEZ_AMOUNT")
+  [[ -z "${LEZ_UI_BTC_AMOUNT:-}" ]] || envs+=(-e "LEZ_UI_BTC_AMOUNT=$LEZ_UI_BTC_AMOUNT")
   for kv in "$@"; do envs+=(-e "$kv"); done
   if [[ "$record" == 1 ]]; then
     segment_index=$((segment_index + 1))
