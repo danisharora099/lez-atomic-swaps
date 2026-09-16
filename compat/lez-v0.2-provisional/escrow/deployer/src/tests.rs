@@ -142,7 +142,7 @@ impl RpcServer for MockNode {
     async fn get_transaction(
         &self,
         _transaction_hash: HashType,
-    ) -> Result<Option<LeeTransaction>, ErrorObjectOwned> {
+    ) -> Result<Option<(LeeTransaction, BlockId)>, ErrorObjectOwned> {
         self.record_call();
         Ok(None)
     }
@@ -155,12 +155,12 @@ impl RpcServer for MockNode {
         Ok(Vec::new())
     }
 
-    async fn get_proof_for_commitment(
+    async fn get_proofs_and_root(
         &self,
-        _commitment: Commitment,
-    ) -> Result<Option<MembershipProof>, ErrorObjectOwned> {
+        commitments: Vec<Commitment>,
+    ) -> Result<(Vec<Option<MembershipProof>>, [u8; 32]), ErrorObjectOwned> {
         self.record_call();
-        Ok(None)
+        Ok((vec![None; commitments.len()], [0; 32]))
     }
 
     async fn get_account(&self, _account_id: AccountId) -> Result<Account, ErrorObjectOwned> {
@@ -834,23 +834,23 @@ fn f7_public_idl_and_artifact_identity_are_exact_and_append_only() {
 
     assert_eq!(
         manifest.artifact.elf_sha256,
-        "237037e1a54187697e7e67a9bf589dfb3eb88c475c7f9b62eb2396144e87c6d0"
+        "3d49502421a5705b2c386bde8d3a439914196f0727169a98794932c14b9777d4"
     );
     assert_eq!(
         manifest.artifact.image_id,
-        "431ab9aec4b21d66e88ecbf8bb83301d5ef4cc0cec0ba0fb76baaa0ac7f9a10b"
+        "c22d61fc00d68083a01bc20c607423e015b9aeb862bbcdf7681b07848368221b"
     );
     assert_eq!(
         manifest.artifact.program_id_words,
         [
-            2_931_366_467,
-            1_713_222_340,
-            4_174_089_960,
-            489_718_715,
-            214_758_494,
-            4_221_570_028,
-            178_961_014,
-            195_164_615,
+            4_234_227_138,
+            2_206_258_688,
+            214_047_648,
+            3_760_419_936,
+            3_098_458_389,
+            4_157_455_202,
+            2_215_058_280,
+            455_239_811,
         ]
     );
     assert_eq!(interface.instruction_count, 18);

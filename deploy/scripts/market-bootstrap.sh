@@ -14,9 +14,10 @@ readonly MARKET_ROOT="${MARKET_ROOT:?MARKET_ROOT must select the market root (id
 readonly SEQUENCER_URL="${SEQUENCER_URL:-http://127.0.0.1:3040}"
 readonly INDEXER_URL="${INDEXER_URL:-http://127.0.0.1:8779}"
 readonly CHANNEL_ID="b6adb2d238911395adde0b2f40b880ec03ffd1a3a8d97e7df8cacadf08873748"
-# LEZ program identity of the pinned escrow guest (its Risc0 image ID differs).
-readonly ESCROW_PROGRAM_ID="${ESCROW_PROGRAM_ID:-b7f8727893174a29bd776eacbfdd9773e0510ebdac43102cb7e93ba4fa0b0433}"
-readonly AUTH_TRANSFER_PROGRAM_ID="dcbbfebcd59399961ed9973b8307dc475fd4c5ca5779aacfe7588f7dbc3f4a71"
+# LEZ program identity of the pinned escrow guest: its Risc0 image ID, which the
+# deployment evidence's preflight.image_id must equal (checked below).
+readonly ESCROW_PROGRAM_ID="${ESCROW_PROGRAM_ID:-c22d61fc00d68083a01bc20c607423e015b9aeb862bbcdf7681b07848368221b}"
+readonly AUTH_TRANSFER_PROGRAM_ID="fe96c4228babbe8bc578e3e25b884cacb07f8c86541f27ed676789875eef875a"
 readonly DEPLOYER="${DEPLOYER:-/provision/escrow-artifact/debug/lez-zec-escrow-v02-deployer}"
 readonly VAULT_CLAIM_BIN="${VAULT_CLAIM_BIN:-/provision/sidecar/lez-v02-vault-claim-poc}"
 readonly LEZ_ATTACH_RUN="market-lez-0001"

@@ -270,6 +270,8 @@ jobs:
         with:
           toolchain: 1.96.0
           components: clippy, rustfmt
+      - name: Install the smart-card library the LEZ v0.2.4 wallet crate links
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libpcsclite-dev
       - name: Provision checksum-verified sidecar native and audit inputs
         run: |
           set -euo pipefail
@@ -331,6 +333,8 @@ jobs:
         with:
           toolchain: 1.96.0
           components: clippy, rustfmt
+      - name: Install the smart-card library the LEZ v0.2.4 wallet crate links
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libpcsclite-dev
       - run: ./scripts/verify-lez-v02-provisional.sh
 
   bitcoin-core-regtest:

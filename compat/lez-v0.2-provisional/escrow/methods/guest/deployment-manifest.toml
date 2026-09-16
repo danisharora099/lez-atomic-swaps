@@ -3,32 +3,32 @@ program = "zec_escrow_v02"
 artifact_status = "locally-built-artifact-checked"
 
 [source]
-lez_tag = "v0.2.0"
-lez_commit = "a58fbce2ff48c58b7bb5001b1a27e64b9596ee3a"
-spel_pr = 238
-spel_commit = "df17acd98436be4f09c55877dae1fe2e73cbcdca"
+lez_tag = "v0.2.4"
+lez_commit = "47eba256479f6f785acbd138834340703cd03401"
+spel_pr = 256
+spel_commit = "7f13e71f91372a32e26b71d19dbbb60532711048"
 risc0_version = "3.0.5"
 risc0_guest_builder = "risczero/risc0-guest-builder:r0.1.94.1@sha256:c2f63fdd720337c0727e05c5e1733083baba04c00a864a89b0e3f4f8d92617be"
 
 [target]
 rpc_url = "https://testnet.lez.logos.co"
 channel_id = "0101010101010101010101010101010101010101010101010101010101010101"
-authenticated_transfer_program_id = [3170810844, 2526647253, 999807262, 1205602179, 3401962591, 3484055895, 2106546407, 1900691388]
-token_program_id = [2282739141, 348907455, 1046946228, 3735699860, 585462133, 3426087150, 772528164, 2090518099]
+authenticated_transfer_program_id = [583309054, 2344528779, 3806558405, 2890696795, 2257354672, 3978764116, 2273929063, 1518858078]
+token_program_id = [1047643340, 4291649067, 2093396023, 4016657193, 3904308476, 481382041, 2987082047, 2603530278]
 # `getProgramIds` omits this built-in on the public v0.2 endpoint. These words
-# are the checked ImageID of LEZ v0.2.0's official associated-token-account ELF;
+# are the checked ImageID of LEZ v0.2.4's official associated-token-account ELF;
 # deployment tooling must report the omission rather than claim RPC attestation.
-associated_token_account_program_id = [3357312149, 3615960253, 3351583505, 2234166003, 4153433811, 2743238177, 2886052503, 4160755157]
-associated_token_account_identity_source = "lez-v0.2.0-checked-elf-rpc-map-omits-key"
+associated_token_account_program_id = [1563554205, 697904783, 2702216093, 2965692927, 3153221855, 2812443166, 1620412227, 3110729199]
+associated_token_account_identity_source = "lez-v0.2.4-checked-elf-rpc-map-omits-key"
 
 [artifact]
-elf_sha256 = "237037e1a54187697e7e67a9bf589dfb3eb88c475c7f9b62eb2396144e87c6d0"
-image_id = "431ab9aec4b21d66e88ecbf8bb83301d5ef4cc0cec0ba0fb76baaa0ac7f9a10b"
-program_id_words = [2931366467, 1713222340, 4174089960, 489718715, 214758494, 4221570028, 178961014, 195164615]
+elf_sha256 = "3d49502421a5705b2c386bde8d3a439914196f0727169a98794932c14b9777d4"
+image_id = "c22d61fc00d68083a01bc20c607423e015b9aeb862bbcdf7681b07848368221b"
+program_id_words = [4234227138, 2206258688, 214047648, 3760419936, 3098458389, 4157455202, 2215058280, 455239811]
 
 [interface]
 idl_sha256 = "04895050affb173d3e87329994ecbbed54781a38d5454ce5b36e155916e4134f"
-generated_client_sha256 = "bcc0d3898343317bdd3bcc0987ec9559db7f4060c4e9fb45f096d1bcd34b48ac"
+generated_client_sha256 = "20d9cd5721bc0121fd21954e9826b219e0050c33a5d599992c170ef7c5da8c72"
 instruction_count = 18
 initialize_token_witnessed_variant = 11
 claim_token_witnessed_variant = 12
