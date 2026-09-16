@@ -187,3 +187,55 @@ Its preflight checks the channel and the live builtin program ids
 (`authenticated_transfer` `fe96c422…`, `token` `ccc4713e…`, and the
 associated-token-account ImageID `9df1315d…`, which `getProgramIds` omits)
 before it submits anything.
+
+## 8. Running the swaps on the desks
+
+Both directions run from `deploy/`, against the public stack rather than the local
+defaults:
+
+```sh
+export LEZ_STACK_COMPOSE_ARGS="-p lez-testnet --env-file testnet.env -f compose.yaml -f compose.testnet.yaml"
+export LEZ_CONTAINER_PREFIX=lez-testnet LEZ_REPAIR_INDEXER=0 LEZ_EXPORT_EVIDENCE=0
+export LEZ_UI_LEZ_AMOUNT=100 LEZ_UI_BTC_AMOUNT=0.0001
+export INTERACTIVE_TIMEOUT_MS=5400000
+scripts/ui-e2e.sh happy --direction TakerSellsForeign --record   # the Taker pays BTC
+scripts/ui-e2e.sh happy --direction TakerSellsLez --record       # the Maker pays BTC
+```
+
+Four things differ from a local run, and each of them will fail a run if missed.
+
+**Trade size.** Keep it small enough for the paying wallet: the local defaults are
+1,000 LEZ for 0.01 BTC, and reserving 1,000,000 sat needs a wallet that holds it.
+`LEZ_UI_BTC_AMOUNT=0.0001` is 10,000 sat. The Bitcoin payer differs per direction, so
+fund both roles: `TakerSellsForeign` spends `lez-taker`, `TakerSellsLez` spends
+`lez-maker`.
+
+**The wait timeout.** The desks wait `INTERACTIVE_TIMEOUT_MS` (default 1,800,000, so
+30 minutes) for the Node to reach the next state, and the swap cannot advance until the
+Taker's Bitcoin lock has a confirmation. testnet4 blocks average 20 minutes, so the
+default is barely 1.5 block intervals and it does time out. 90 minutes survives a run of
+empty blocks.
+
+**Stale offers.** The publish step publishes "until two are pending" and offers live for
+`offer_ttl_seconds` (3600). So after changing the trade size, two old offers suppress the
+corrected ones and the run takes a stale one instead — the tell is that the "New offer:"
+narration lines are missing. Either wait for them to expire or run the other direction
+first: `offer-sell-btc-*` (TakerSellsLez) and `offer-sell-lez-*` (TakerSellsForeign) do
+not block each other.
+
+**Empty blocks, and why waiting is the only remedy.** Runs of testnet4 blocks carry
+nothing but their coinbase, so a lock can sit unconfirmed for tens of minutes at any fee
+rate. Do not try to mine your way out: the minimum-difficulty exception applies only to a
+block whose timestamp is more than 20 minutes after its parent's, and parent timestamps
+here run ~2 h ahead of wall clock while consensus caps a timestamp at `now + 7200`, so a
+candidate block gets the real retarget difficulty instead. `getblocktemplate` reports that
+honestly (1.3e9 × difficulty 1 when measured); `getmininginfo`'s `difficulty 1` describes
+the tip, not your candidate. Never fee-bump either: the Bitcoin lock is a protocol
+transaction the Node signed at take time, and replacing it invalidates the signed path.
+
+**Resuming after a desk timeout.** A timeout fails the recording, not the swap: the Maker
+Node funds the LEZ escrow on its own once the Taker's lock confirms. Re-running the
+scenario would create a *new* swap and strand the funded lock, so drive the remaining
+steps against the existing one instead, passing `INTERACTIVE_ACTION`,
+`INTERACTIVE_STATE`, `INTERACTIVE_SWAP_ID` (and `INTERACTIVE_EXPECT_LABEL` for a Maker
+wait) into the same `/ui-tests/record-step.sh` the runner uses.
