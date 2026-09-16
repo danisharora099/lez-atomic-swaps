@@ -167,8 +167,9 @@ The official sequencer admits at most **614,200 bytes** per transaction, and a
 program deployment carries the whole risc0 program binary. The escrow guest
 built with default settings is 685,524 bytes: 198 KB of it are symbol and
 string tables the zkVM never loads. The guest crate therefore strips symbols
-in its release profile (`escrow/methods/guest/Cargo.toml`); the loaded image,
-and so the ImageID, does not depend on them.
+in its release profile (`escrow/methods/guest/Cargo.toml`), which brings the
+binary to 487,244 bytes. Stripping changes the ImageID, so the escrow program id
+is the stripped guest's (`c22d61fc…`).
 
 Deploy through the sequencer proxy's network namespace, where
 `http://127.0.0.1:3040/` is the official sequencer, which is the only kind of
