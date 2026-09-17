@@ -643,6 +643,10 @@ pub(super) async fn reserve(
             bitcoin: *lifecycle.runtime.bitcoin_policy(),
             lez: *lifecycle.runtime.lez_identity(),
             lez_owner_account: lifecycle.runtime.lez_owner_account(),
+            bitcoin_claim_destination: lifecycle
+                .runtime
+                .bitcoin_claim_destination()
+                .map(<[u8]>::to_vec),
             expires_at_unix_seconds: offer.expires_at_unix_seconds(),
         },
         Some(maker_key),

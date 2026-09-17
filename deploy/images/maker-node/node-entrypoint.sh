@@ -70,8 +70,26 @@ if [[ "$btc_lifecycle_ready" == 1 ]]; then
   actor_sha="$(sha256sum "$actor_program" | cut -d' ' -f1)"
   wallet_json='null'
   [[ -n "${LEZ_BTC_WALLET:-}" ]] && wallet_json="\"${LEZ_BTC_WALLET}\""
+  # "wallet" pays this role's claims into its own Core wallet, so the desk's
+  # balance shows them; the address is kept so a restart reuses it.
+  claim_destination="${LEZ_BTC_CLAIM_DESTINATION:-}"
+  if [[ "$claim_destination" == wallet ]]; then
+    if [[ ! -s "$btc_state/claim-destination" ]]; then
+      curl -fsS --max-time 10 --user "$(cat "$btc_state/btc-rpc-cookie")" \
+        --header 'content-type: application/json' \
+        --data '{"jsonrpc":"2.0","id":1,"method":"getnewaddress","params":["","bech32m"]}' \
+        "http://127.0.0.1:18443/wallet/${LEZ_BTC_WALLET:?claim destination needs a wallet}" \
+        | jq -er '.result' >"$btc_state/claim-destination"
+    fi
+    claim_destination="$(cat "$btc_state/claim-destination")"
+  fi
+  claim_destination_json='null'
+  if [[ -n "$claim_destination" ]]; then
+    claim_destination_json="\"$claim_destination\""
+  fi
   jq -n --arg swaps "$btc_state/swaps" --arg cookie "$btc_state/btc-rpc-cookie" \
-    --argjson wallet "$wallet_json" --arg btc_genesis "$bitcoin_genesis" \
+    --argjson wallet "$wallet_json" --argjson claim_destination "$claim_destination_json" \
+    --arg btc_genesis "$bitcoin_genesis" \
     --arg channel "$channel_id" --arg genesis "$lez_genesis_hash" --arg program "$escrow_program_id" \
     --arg transfer "$auth_transfer_program_id" --arg sidecar_program /usr/local/bin/lez-v02-bridge-poc \
     --arg sequencer "$sequencer_url" --arg indexer "$indexer_url" --argjson port_base "$sidecar_port_base" \
@@ -86,6 +104,7 @@ if [[ "$btc_lifecycle_ready" == 1 ]]; then
     --argjson discovery "${LEZ_LEZ_DISCOVERY_MAX_BLOCKS:-2048}" '
     {schema_version:1, swaps_root:$swaps,
      bitcoin:{network:$btc_network, endpoint:"http://127.0.0.1:18443/", cookie_file:$cookie, wallet:$wallet,
+              claim_destination_address:$claim_destination,
               genesis_block_hash:$btc_genesis, required_confirmations:1, refund_csv_blocks:$csv, claim_fee_sat:1000},
      lez:{channel_id:$channel, genesis_block_hash:$genesis, escrow_program_id:$program,
           authenticated_transfer_program_id:$transfer, sidecar_program:$sidecar_program,

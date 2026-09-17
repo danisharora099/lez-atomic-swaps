@@ -508,3 +508,34 @@ fn unsigned_draft_is_composed_from_public_contributions_for_both_directions() {
         );
     }
 }
+
+#[test]
+fn a_configured_claim_destination_replaces_the_minted_key() {
+    let temp = tempfile::tempdir().unwrap();
+    let canonical_temp = fs::canonicalize(temp.path()).unwrap();
+    let spec_file = canonical_temp.join("maker.json");
+    let root = canonical_temp.join("maker-role");
+    // A P2TR script the operator already owns, so this role mints no key for it.
+    let mut destination = vec![0x51, 0x20];
+    destination.extend([0x44; 32]);
+    let script = hex::encode(&destination);
+    let mut spec = role_spec("maker", 0x40);
+    spec["bitcoin"]["claim_destination_script_pubkey"] = serde_json::json!(&script);
+    write_private_json(&spec_file, &spec);
+
+    let summary = bootstrap_role(&spec_file, &root).unwrap();
+
+    let wire = fs::read(summary.contribution_file()).unwrap();
+    let contribution = BtcRoleContributionV1::from_wire(&wire).unwrap();
+    assert_eq!(
+        hex::encode(
+            contribution
+                .body()
+                .participant_identity()
+                .claim_destination_script_pubkey()
+        ),
+        script
+    );
+    assert!(!root.join("private/bitcoin-claim-destination.key").exists());
+    assert_eq!(fs::read_dir(root.join("private")).unwrap().count(), 3);
+}
