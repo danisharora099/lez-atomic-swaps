@@ -634,31 +634,32 @@ def scenario_refund_admitted_then_maker_lock(stamp: str) -> dict:
     cutoff = int(terms["maker_second_lock_cutoff_unix_seconds"])
     opens = int(terms["later_refund_earliest_unix_seconds"])
     before = node_balances("taker")
-    log("  stopping the Maker so its Bitcoin lock is not broadcast before the cutoff")
-    docker("stop", NODES["maker"][0])
-    maker_down = True
+    # Stop the miner, not the Maker: the Maker broadcasts its Bitcoin lock on
+    # time (once the Taker's LEZ lock finalizes), but held out of a block it
+    # stays unconfirmed, so the Taker never observes a maker lock and routes to
+    # recovery at the cutoff. Confirming it afterwards makes it present and
+    # timely-by-median — exactly the wild condition (a slow inclusion), which a
+    # Maker held down past its own cutoff cannot reproduce (it refuses to lock).
+    log("  stopping the miner so the Maker's lock is broadcast on time but not yet confirmed")
+    docker("stop", "lez-btc-miner")
+    miner_down = True
     try:
         lock(swap_id)
-        wait_until(cutoff + 30, "for the Maker's cutoff to pass with no maker lock yet")
-        # Admit a refund while the maker lock is still absent: this is the
-        # branch that later short-circuited the observer.
+        maker_lock = wait_mempool_transaction(timeout=max(60, cutoff - int(time.time()) - 30))
+        log(f"  Maker's Bitcoin lock {maker_lock[:12]} is broadcast (in mempool), unconfirmed")
+        wait_until(cutoff + 30, "for the cutoff to pass with the maker lock still unconfirmed")
         reply = rpc("taker", "taker_swap_refund_v1", {
             "schema_version": 1, "request_id": f"e2e-refund-{stamp}",
             "swap_id": swap_id, "expected_generation": taker_view(swap_id)["progress_generation"]})
         if "result" not in reply:
             raise Failure(f"refund admission failed: {json.dumps(reply.get('error'))[:200]}")
-        log(f"  refund admitted at rev {taker_view(swap_id)['progress_generation']} (maker lock still absent)")
-        log("  restarting the Maker; it now broadcasts its lock after the cutoff (timely by median on regtest)")
-        docker("start", NODES["maker"][0])
-        maker_down = False
-        wait_healthy("maker")
-        maker_lock = wait_mempool_transaction(timeout=240)
+        log(f"  refund admitted at rev {taker_view(swap_id)['progress_generation']} (maker lock still unconfirmed)")
         [block_hash] = bitcoin("generatetoaddress", "1", MINER_ADDRESS)
         blk = bitcoin("getblock", block_hash, "1")
         if maker_lock not in blk["tx"]:
             raise Failure(f"block {block_hash[:12]} did not include the maker lock {maker_lock[:12]}")
-        log(f"  maker lock {maker_lock[:12]} included; block median {blk['mediantime']} vs cutoff {cutoff} "
-            f"({'timely' if int(blk['mediantime']) <= cutoff else 'late'} by median)")
+        by_median = "timely" if int(blk["mediantime"]) <= cutoff else "late"
+        log(f"  maker lock confirmed; block median {blk['mediantime']} vs cutoff {cutoff} ({by_median} by median)")
         mine(int(require_fast_profile()["LEZ_BTC_REFUND_CSV_BLOCKS"]) + 1)
         # Hand off to the Node observer alone. Do NOT drive the actor from here;
         # only wait (mining to advance regtest finality) for it to reach refunded.
@@ -678,8 +679,8 @@ def scenario_refund_admitted_then_maker_lock(stamp: str) -> dict:
         after = node_balances("taker")
         log(f"  observer recovered the swap unaided; Taker balances {before} → {after}")
     finally:
-        if maker_down:
-            docker("start", NODES["maker"][0])
+        if miner_down:
+            docker("start", "lez-btc-miner")
     return {"swap_id": swap_id, "maker_lock_txid": maker_lock, "cutoff": cutoff,
             "taker_balance_before": before, "taker_balance_after": after}
 

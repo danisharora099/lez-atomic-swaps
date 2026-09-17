@@ -7118,10 +7118,17 @@ fn validate_lez_refund_found(
     ];
     let same_height_wrong_hash = transaction.position.height == response.clock_after.height
         && transaction.position.block_hash != response.clock_after.block_hash;
+    // A found refund only needs to sit inside its validity window and be
+    // finalized: height in [start, end] and height <= clock (LEZ finality is
+    // irreversibility, not depth, so a finalized height cannot be reorged out).
+    // Requiring the window's *end* to also be finalized is the Absent-case
+    // invariant -- proving nothing was included needs the whole window scanned --
+    // and does not belong here: it stranded a completed, irreversible refund
+    // until the ~1h-lagging finalized clock passed the window end, looping
+    // `refund_found#4` forever (public testnet, swap de229f88).
     if account_state != Some(EscrowState::Refunded)
         || transaction.position.height < window.start_height()
         || transaction.position.height > end
-        || end > response.clock_after.height
         || transaction.position.height > response.clock_after.height
         || same_height_wrong_hash
         || !transaction.is_public
