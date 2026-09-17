@@ -2790,6 +2790,73 @@ async fn schema5_three_step_asset_lock_is_ordered_and_uncertainty_never_submits(
 }
 
 #[tokio::test]
+async fn recover_reports_its_own_command_when_it_projects_the_makers_sent_lock() {
+    // Regression (public testnet, swap 158065f1): the Maker's lock finalized
+    // after its cutoff, so the supervisor ran `recover`, which projected the
+    // lock and returned the drive routine's output verbatim. The supervisor
+    // rejects another command's output, failed the swap out of its poll set,
+    // and the Maker's follow-up claim then never fired on its own.
+    freeze_wall_clock_before_maker_cutoff();
+    let mut fixture =
+        ActorFixture::for_direction(SwapDirection::TakerSellsForeign, ActorRole::Maker);
+    let _ = configure_schema5_asset_material(&mut fixture);
+    activate_and_project_taker_lock(&fixture).await;
+    let plan = load_prepared_maker_lock_material(&fixture.config, &fixture.agreement)
+        .expect("asset maker material")
+        .plan()
+        .clone();
+    let eligibility = fresh_maker_eligibility(&fixture);
+    let complete = exact_maker_lock_complete_observation(&fixture.agreement, &plan, 0xa6);
+    let last = plan.steps().len() - 1;
+    for (index, step) in plan.steps().iter().enumerate() {
+        let absent = FixedMakerLockPort::new(
+            MakerLockStepChainObservationV1::Absent,
+            eligibility.clone(),
+            complete.clone(),
+        )
+        .with_submission_result(BtcMakerLockSubmissionResult::Accepted(
+            step.expected_public_id().as_str().into(),
+        ));
+        drive_maker_lock_with_port(
+            &fixture.config,
+            fixture.agreement.clone(),
+            fixture.agreement_wire.clone(),
+            &absent,
+        )
+        .await
+        .expect("step sent in time");
+        let present = FixedMakerLockPort::new(
+            MakerLockStepChainObservationV1::PresentExactCanonical {
+                expected_public_id: step.expected_public_id().as_str().into(),
+                exact_public_bytes: step.exact_bytes().as_slice().to_vec(),
+            },
+            eligibility.clone(),
+            complete.clone(),
+        );
+        let before = durable_status(&fixture);
+        let projected = project_own_maker_lock_before_recovery(
+            &fixture.config,
+            &fixture.agreement,
+            &fixture.agreement_wire,
+            &present,
+            &before,
+        )
+        .await;
+        if index < last {
+            // An earlier step advances no revision: recovery is not pre-empted.
+            assert!(projected.is_none());
+            continue;
+        }
+        let output = projected.expect("the completed lock pre-empts recovery");
+        assert_eq!(output.command, ActorEffectCommandV1::Recover);
+        assert_eq!(output.revision, 2);
+        assert_eq!(output.phase, ActorPhaseV1::BothLegsLocked);
+        let wire: Value = serde_json::to_value(&output).expect("effect output JSON");
+        assert_eq!(wire["command"], "recover");
+    }
+}
+
+#[tokio::test]
 async fn schema4_changed_lez_preparation_result_conflicts_with_durable_intent() {
     freeze_wall_clock_before_maker_cutoff();
     let mut fixture =

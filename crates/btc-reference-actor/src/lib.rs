@@ -3784,6 +3784,39 @@ async fn drive_live(config: &ActorConfig) -> Result<ActorEffectOutputV1, ActorCo
     }
 }
 
+/// A Maker past its cutoff may still hold a lock it sent in time and has not
+/// yet observed (LEZ finality alone outlasts the cutoff on a public network);
+/// the Taker sees that lock as canonical and may already have claimed. It is
+/// projected before any recovery of the Taker's leg; only a lock that is
+/// absent, or was refused as late, leaves recovery to run.
+///
+/// The projection is reported as `recover`'s own output. The supervisor
+/// rejects another command's output as invalid and fails the swap out of its
+/// poll set, after which the Maker never sees the Taker's claim nor sends its
+/// follow-up until an operator queues one (public testnet, swap 158065f1).
+async fn project_own_maker_lock_before_recovery(
+    config: &ActorConfig,
+    agreement: &BtcAgreementV1,
+    wire: &[u8],
+    port: &dyn MakerLockExecutionPort,
+    durable: &BtcOfflineStatus,
+) -> Option<ActorEffectOutputV1> {
+    match drive_maker_lock_with_port(config, agreement.clone(), wire.to_vec(), port).await {
+        Ok(output) if output.revision > durable.revision() => Some(ActorEffectOutputV1 {
+            command: ActorEffectCommandV1::Recover,
+            ..output
+        }),
+        Ok(_) => None,
+        Err(error) => {
+            trace_note(
+                "first_lock_recovery_lock_observation",
+                &format!("own lock not projected before recovery: {error:?}"),
+            );
+            None
+        }
+    }
+}
+
 async fn recover_live(config: &ActorConfig) -> Result<ActorEffectOutputV1, ActorCommandError> {
     if !state_file_exists(&config.state_db)? {
         return Err(ActorCommandError::NotActivated);
@@ -3810,23 +3843,15 @@ async fn recover_live(config: &ActorConfig) -> Result<ActorEffectOutputV1, Actor
             &durable,
         ));
     };
-    // A Maker past its cutoff may still hold a lock it sent in time and has
-    // not yet observed (its supervisor served other swaps first, say); the
-    // Taker sees that lock as canonical and may already have claimed. It is
-    // projected before any recovery of the Taker's leg; only a lock that is
-    // absent, or was refused as late, leaves recovery to run.
     if transition == RefundTransition::FirstLockRecovery
         && config.role == ActorRole::Maker
         && config.supports_owned_maker_lock()
     {
         let port = LiveMakerLockExecutionPort::new(config)?;
-        match drive_maker_lock_with_port(config, agreement.clone(), wire.clone(), &port).await {
-            Ok(output) if output.revision > durable.revision() => return Ok(output),
-            Ok(_) => {}
-            Err(error) => trace_note(
-                "first_lock_recovery_lock_observation",
-                &format!("own lock not projected before recovery: {error:?}"),
-            ),
+        if let Some(output) =
+            project_own_maker_lock_before_recovery(config, &agreement, &wire, &port, &durable).await
+        {
+            return Ok(output);
         }
     }
     let chain = agreement
