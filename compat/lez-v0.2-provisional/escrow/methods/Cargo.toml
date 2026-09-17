@@ -20,7 +20,6 @@ borsh = { version = "=1.7.0", features = ["derive"] }
 lez-zec-escrow-v02 = { version = "=0.0.0", path = ".." }
 musig2 = { version = "=0.4.1", default-features = false, features = ["secp256k1"] }
 nssa = { package = "lee", version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4" }
-nssa_core = { package = "lee_core", version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4", features = ["host"] }
 programs = { version = "=0.1.0", git = "https://github.com/logos-blockchain/logos-execution-zone.git", tag = "v0.2.4", features = ["artifacts"] }
 serde = { version = "=1.0.228", features = ["derive"] }
 sha2 = "=0.10.9"
