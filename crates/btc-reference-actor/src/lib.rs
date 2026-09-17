@@ -1230,6 +1230,16 @@ impl CanonicalInclusionTimeV1 {
                 .is_some_and(|cutoff_ms| *timestamp_ms <= cutoff_ms),
         }
     }
+
+    /// Inclusion time in whole seconds, the unit the recovery plan speaks.
+    const fn unix_seconds(&self) -> u64 {
+        match self {
+            Self::Bitcoin {
+                median_time_unix_seconds,
+            } => *median_time_unix_seconds,
+            Self::Lez { timestamp_ms } => *timestamp_ms / 1_000,
+        }
+    }
 }
 
 fn canonical_maker_lock_is_timely(
@@ -1239,6 +1249,73 @@ fn canonical_maker_lock_is_timely(
 ) -> bool {
     canonical_inclusion_time.chain() == maker_chain
         && canonical_inclusion_time.is_at_or_before_cutoff(cutoff_unix_seconds)
+}
+
+/// One safety read that found the Maker's lock included after the signed cutoff.
+#[derive(Clone, Debug, Serialize)]
+#[serde(deny_unknown_fields)]
+struct MakerLockLateEvidenceV1 {
+    schema_version: u16,
+    read_ordinal: u8,
+    agreement_commitment: String,
+    maker_chain: Chain,
+    cutoff_unix_seconds: u64,
+    late_lock_transaction_id: String,
+    inclusion: CanonicalInclusionTimeV1,
+}
+
+/// A canonical Maker lock that landed after the signed cutoff, seen from the
+/// Taker's first-lock recovery.
+///
+/// `drive` refuses such a lock as late and never projects it, so reporting it
+/// here as `Uncertain` left recovery waiting for a projection nobody would
+/// make: the Taker's leg stayed locked, every retry succeeded, and nothing was
+/// ever sent. The recovery plan already names the way out — a lock "refused as
+/// late leaves recovery to run" — and the timelock margin orders the Maker's
+/// refund before the Taker's, so admitting recovery here is the intended path,
+/// not a loosening. The late lock itself is the read's evidence.
+///
+/// Returns `None` for a timely lock, which the caller reports as ready.
+fn classify_late_maker_lock(
+    agreement: &BtcAgreementV1,
+    read_ordinal: u8,
+    maker_chain: Chain,
+    inclusion: &CanonicalInclusionTimeV1,
+    late_lock_transaction_id: &str,
+) -> Result<Option<FirstLockRecoverySafetyObservation>, ActorCommandError> {
+    let cutoff_unix_seconds = agreement
+        .body()
+        .recovery_plan()
+        .maker_second_lock_cutoff_unix_seconds();
+    if canonical_maker_lock_is_timely(maker_chain, inclusion, cutoff_unix_seconds) {
+        return Ok(None);
+    }
+    if !matches!(read_ordinal, 1 | 2) || inclusion.chain() != maker_chain {
+        return Err(ActorCommandError::AgreementBindingInvalid);
+    }
+    let observed_unix_seconds = inclusion.unix_seconds();
+    trace_note(
+        "first_lock_safety_late_lock",
+        &format!(
+            "{maker_chain:?} maker lock {late_lock_transaction_id} included at {observed_unix_seconds}, after cutoff {cutoff_unix_seconds}: recovery may run"
+        ),
+    );
+    let absence_evidence = serde_json::to_vec(&MakerLockLateEvidenceV1 {
+        schema_version: 1,
+        read_ordinal,
+        agreement_commitment: hex::encode(agreement.agreement_commitment()),
+        maker_chain,
+        cutoff_unix_seconds,
+        late_lock_transaction_id: late_lock_transaction_id.to_owned(),
+        inclusion: inclusion.clone(),
+    })
+    .map_err(trace_observation_unavailable)?;
+    Ok(Some(FirstLockRecoverySafetyObservation::ReadyToRefund {
+        maker_chain,
+        cutoff_unix_seconds,
+        observed_unix_seconds,
+        absence_evidence,
+    }))
 }
 
 /// Canonical durable proof that a maker lock was included no later than the signed cutoff.
@@ -8399,21 +8476,18 @@ impl FirstLockRecoverySafetyPort for LiveLezMakerLockSafety {
                 scanned_window,
                 funding,
             } => {
-                let cutoff_unix_seconds = agreement
-                    .body()
-                    .recovery_plan()
-                    .maker_second_lock_cutoff_unix_seconds();
                 let inclusion = CanonicalInclusionTimeV1::Lez {
                     timestamp_ms: funding.containing_block.timestamp_ms,
                 };
-                if !canonical_maker_lock_is_timely(maker_chain, &inclusion, cutoff_unix_seconds) {
-                    trace_note(
-                        "first_lock_safety_uncertain",
-                        &format!(
-                            "lez maker lock found but late: {inclusion:?} cutoff {cutoff_unix_seconds}"
-                        ),
-                    );
-                    return Ok(FirstLockRecoverySafetyObservation::Uncertain { maker_chain });
+                let transaction_id = hex::encode(funding.transaction.transaction_id.as_bytes());
+                if let Some(late) = classify_late_maker_lock(
+                    agreement,
+                    read_ordinal,
+                    maker_chain,
+                    &inclusion,
+                    &transaction_id,
+                )? {
+                    return Ok(late);
                 }
                 let chain_evidence = encode_lez_maker_lock_found_evidence(
                     &self.config,
@@ -8427,8 +8501,7 @@ impl FirstLockRecoverySafetyPort for LiveLezMakerLockSafety {
                 )?;
                 Ok(FirstLockRecoverySafetyObservation::MakerLockReady {
                     chain: maker_chain,
-                    transaction_id: hex::encode(funding.transaction.transaction_id.as_bytes())
-                        .into_boxed_str(),
+                    transaction_id: transaction_id.into_boxed_str(),
                     confirmations: FINALIZED_LEZ_CONFIRMATION_UNITS,
                     chain_evidence,
                 })
@@ -8586,15 +8659,18 @@ impl FirstLockRecoverySafetyPort for LiveBitcoinMakerLockSafety {
         };
         match observation {
             FundingObservation::Ready(observed) => {
-                let cutoff_unix_seconds = agreement
-                    .body()
-                    .recovery_plan()
-                    .maker_second_lock_cutoff_unix_seconds();
                 let inclusion = CanonicalInclusionTimeV1::Bitcoin {
                     median_time_unix_seconds: observed.block_median_time_unix_seconds(),
                 };
-                if !canonical_maker_lock_is_timely(maker_chain, &inclusion, cutoff_unix_seconds) {
-                    return Ok(FirstLockRecoverySafetyObservation::Uncertain { maker_chain });
+                let transaction_id = observed.transaction().compute_txid().to_string();
+                if let Some(late) = classify_late_maker_lock(
+                    agreement,
+                    read_ordinal,
+                    maker_chain,
+                    &inclusion,
+                    &transaction_id,
+                )? {
+                    return Ok(late);
                 }
                 let chain_evidence = BitcoinCoreEvidenceV1::funding_ready(agreement, &observed)
                     .and_then(|evidence| evidence.encode())
@@ -8606,11 +8682,7 @@ impl FirstLockRecoverySafetyPort for LiveBitcoinMakerLockSafety {
                 )?;
                 Ok(FirstLockRecoverySafetyObservation::MakerLockReady {
                     chain: maker_chain,
-                    transaction_id: observed
-                        .transaction()
-                        .compute_txid()
-                        .to_string()
-                        .into_boxed_str(),
+                    transaction_id: transaction_id.into_boxed_str(),
                     confirmations: observed.confirmations(),
                     chain_evidence,
                 })

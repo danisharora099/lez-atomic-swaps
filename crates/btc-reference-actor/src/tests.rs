@@ -9297,3 +9297,78 @@ async fn bitcoin_taker_leg_owner_sends_once_then_projects_terminal_refund() {
         Some(BtcTerminalOutcome::Refunded)
     );
 }
+
+/// A Maker lock included after the signed cutoff is one `drive` refuses, so the
+/// safety read must admit recovery rather than report it uncertain: the latter
+/// parked a Taker's leg forever, with every refund request succeeding and none
+/// sent (public testnet, swap 54184a0e, 2026-09-16).
+#[test]
+fn late_maker_lock_admits_first_lock_recovery() {
+    fn inclusion(chain: Chain, unix_seconds: u64) -> CanonicalInclusionTimeV1 {
+        match chain {
+            Chain::Bitcoin => CanonicalInclusionTimeV1::Bitcoin {
+                median_time_unix_seconds: unix_seconds,
+            },
+            Chain::Lez => CanonicalInclusionTimeV1::Lez {
+                timestamp_ms: unix_seconds * 1_000,
+            },
+            other => panic!("maker never funds {other:?} on this pair"),
+        }
+    }
+    for direction in [
+        SwapDirection::TakerSellsLez,
+        SwapDirection::TakerSellsForeign,
+    ] {
+        let fixture = ActorFixture::for_direction(direction, ActorRole::Taker);
+        let agreement = &fixture.agreement;
+        let maker_chain = agreement.coordinator().funded_chain(Participant::Maker);
+        let cutoff = agreement
+            .body()
+            .recovery_plan()
+            .maker_second_lock_cutoff_unix_seconds();
+
+        let timely = inclusion(maker_chain, cutoff);
+        assert!(
+            classify_late_maker_lock(agreement, 1, maker_chain, &timely, "tx")
+                .expect("timely lock classifies")
+                .is_none(),
+            "{direction:?}: a lock at the cutoff is still timely"
+        );
+
+        let late = inclusion(maker_chain, cutoff + 1);
+        let reads: Vec<_> = [1_u8, 2]
+            .into_iter()
+            .map(|ordinal| {
+                classify_late_maker_lock(agreement, ordinal, maker_chain, &late, "tx")
+                    .expect("late lock classifies")
+                    .expect("{direction:?}: a late lock admits recovery")
+            })
+            .collect();
+        let evidence: Vec<&[u8]> = reads
+            .iter()
+            .map(|read| match read {
+                FirstLockRecoverySafetyObservation::ReadyToRefund {
+                    maker_chain: chain,
+                    cutoff_unix_seconds,
+                    observed_unix_seconds,
+                    absence_evidence,
+                } => {
+                    assert_eq!(*chain, maker_chain);
+                    assert_eq!(*cutoff_unix_seconds, cutoff);
+                    assert!(*observed_unix_seconds >= cutoff, "{direction:?}");
+                    assert!(absence_evidence.len() <= MAX_FIRST_LOCK_SAFETY_READ_BYTES);
+                    absence_evidence.as_slice()
+                }
+                other => panic!("{direction:?}: expected ReadyToRefund, got {other:?}"),
+            })
+            .collect();
+        assert_ne!(
+            evidence[0], evidence[1],
+            "{direction:?}: the two reads must differ for the admission to hold"
+        );
+        assert!(
+            classify_late_maker_lock(agreement, 3, maker_chain, &late, "tx").is_err(),
+            "{direction:?}: only reads 1 and 2 are admissible"
+        );
+    }
+}

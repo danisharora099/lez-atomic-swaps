@@ -16,6 +16,7 @@ under `runtime/e2e/<scenario>.json`, so CI can run them as separate jobs.
     node-e2e.py concurrent       two swaps interleaved end to end
     node-e2e.py taker-refund     Maker stopped before funding; Taker refunds its Bitcoin
     node-e2e.py maker-refund     Taker never claims; Maker refunds LEZ, then Taker refunds Bitcoin
+    node-e2e.py late-maker-lock  Maker's Bitcoin lock lands after its cutoff; Taker still refunds its LEZ
     node-e2e.py regenerated-config  live btc-role.json rendered again, Taker Node restarted: the swap reloads and completes
     node-e2e.py tampered-config     the swap's copied taker-role-config.json altered: the swap is refused after a restart
     node-e2e.py all              every scenario in sequence (stops at the first failure)
@@ -591,6 +592,78 @@ def scenario_maker_refund(stamp: str) -> dict:
     return {"swap_id": swap_id}
 
 
+def wait_until(unix_seconds: float, describe: str) -> None:
+    remaining = unix_seconds - time.time()
+    if remaining > 0:
+        log(f"  waiting {int(remaining)}s {describe}")
+        time.sleep(remaining)
+
+
+def wait_mempool_transaction(timeout: float) -> str:
+    """The first transaction to reach Bitcoin Core's mempool. With the block
+    miner stopped nothing else is broadcast, so it is the Maker's lock."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        pool = bitcoin("getrawmempool")
+        if isinstance(pool, list) and pool:
+            return str(pool[0])
+        time.sleep(5)
+    raise Failure(f"no Maker lock reached the mempool within {int(timeout)}s; the scenario cannot make it late")
+
+
+def scenario_late_maker_lock(stamp: str) -> dict:
+    """The Maker's lock is sent in time but lands after its cutoff. `drive`
+    refuses it as late and never projects it; the Taker's first-lock recovery
+    used to answer that with `awaiting_observation` forever — its LEZ locked,
+    every refund request admitted, nothing ever sent (public testnet, swap
+    54184a0e, 2026-09-16). Reverse direction only: the Taker locks LEZ and the
+    late lock is Bitcoin, where regtest lets the harness decide inclusion."""
+    if not REVERSE:
+        raise Failure("this scenario needs --direction TakerSellsLez")
+    profile = require_fast_profile()
+    csv_blocks = int(profile["LEZ_BTC_REFUND_CSV_BLOCKS"])
+    # Median-time-past trails wall time by up to eleven blocks, and on an idle
+    # regtest chain sits hours behind: a block mined after the cutoff would
+    # still read as timely.
+    mine(11)
+    offer_id = publish_offer(stamp)
+    swap_id, _ = take(offer_id, stamp)
+    terms = taker_view(swap_id)["terms"]
+    cutoff = int(terms["maker_second_lock_cutoff_unix_seconds"])
+    opens = int(terms["later_refund_earliest_unix_seconds"])
+    log(f"  Maker cutoff at {time.strftime('%H:%M:%S', time.localtime(cutoff))}; "
+        f"the Taker's refund opens at {time.strftime('%H:%M:%S', time.localtime(opens))}")
+    log("  stopping the block miner: when the Maker's lock is included is this scenario's to decide")
+    docker("stop", "lez-btc-miner")
+    before = node_balances("taker")
+    try:
+        lock(swap_id)
+        maker_lock = wait_mempool_transaction(timeout=max(30, cutoff - time.time() - 30))
+        log(f"  Maker's Bitcoin lock {maker_lock[:12]} is in the mempool; holding it past the cutoff")
+        wait_until(cutoff + 5, "for the cutoff to pass")
+        # Six empty blocks carry median-time-past over the cutoff; the seventh
+        # includes the lock, so its inclusion time is provably late.
+        for _ in range(6):
+            bitcoin("generateblock", MINER_ADDRESS, "[]")
+        [block_hash] = bitcoin("generatetoaddress", "1", MINER_ADDRESS)
+        block = bitcoin("getblock", block_hash, "1")
+        if maker_lock not in block["tx"]:
+            raise Failure(f"block {block_hash[:12]} did not include the Maker's lock {maker_lock[:12]}")
+        median = int(block["mediantime"])
+        if median <= cutoff:
+            raise Failure(f"the lock's block median time {median} is not after the cutoff {cutoff}")
+        log(f"  Maker's lock included at median time {median}, {median - cutoff}s after the cutoff")
+        mine(csv_blocks + 1)  # the Maker's own CSV refund opens too, as it did on testnet
+        wait_until(opens + 5, "for the Taker's refund to open")
+        request_refund_until_terminal(swap_id, stamp, timeout=1800)
+        after = node_balances("taker")
+        log(f"  Taker's LEZ refunded despite the late Maker lock; balances {before} → {after}")
+    finally:
+        docker("start", "lez-btc-miner")
+    return {"swap_id": swap_id, "maker_lock_txid": maker_lock, "cutoff": cutoff,
+            "taker_balance_before": before, "taker_balance_after": after}
+
+
 def taker_swap_directory(swap_id: str) -> str:
     """The Taker Node's per-swap directory (the record stores the swap id as bytes)."""
     reader = (
@@ -672,6 +745,7 @@ SCENARIOS = {
     "concurrent": scenario_concurrent,
     "taker-refund": scenario_taker_refund,
     "maker-refund": scenario_maker_refund,
+    "late-maker-lock": scenario_late_maker_lock,
     "regenerated-config": scenario_regenerated_config,
     "tampered-config": scenario_tampered_config,
 }
