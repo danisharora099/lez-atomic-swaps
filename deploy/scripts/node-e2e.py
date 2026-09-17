@@ -16,7 +16,7 @@ under `runtime/e2e/<scenario>.json`, so CI can run them as separate jobs.
     node-e2e.py concurrent       two swaps interleaved end to end
     node-e2e.py taker-refund     Maker stopped before funding; Taker refunds its Bitcoin
     node-e2e.py maker-refund     Taker never claims; Maker refunds LEZ, then Taker refunds Bitcoin
-    node-e2e.py late-maker-lock  Maker's Bitcoin lock lands after its cutoff; Taker still refunds its LEZ
+    node-e2e.py refund-then-maker-lock  Refund admitted, then a late-but-timely maker lock; the observer must still recover
     node-e2e.py regenerated-config  live btc-role.json rendered again, Taker Node restarted: the swap reloads and completes
     node-e2e.py tampered-config     the swap's copied taker-role-config.json altered: the swap is refused after a restart
     node-e2e.py all              every scenario in sequence (stops at the first failure)
@@ -611,55 +611,75 @@ def wait_mempool_transaction(timeout: float) -> str:
     raise Failure(f"no Maker lock reached the mempool within {int(timeout)}s; the scenario cannot make it late")
 
 
-def scenario_late_maker_lock(stamp: str) -> dict:
-    """The Maker's lock is sent in time but lands after its cutoff. `drive`
-    refuses it as late and never projects it; the Taker's first-lock recovery
-    used to answer that with `awaiting_observation` forever — its LEZ locked,
-    every refund request admitted, nothing ever sent (public testnet, swap
-    54184a0e, 2026-09-16). Reverse direction only: the Taker locks LEZ and the
-    late lock is Bitcoin, where regtest lets the harness decide inclusion."""
+def scenario_refund_admitted_then_maker_lock(stamp: str) -> dict:
+    """A refund admitted at revision one, then a maker lock that arrives after
+    the cutoff but is still timely by median time. The observer's admitted-
+    refund branch ran only `recover` (which observes: "the lock is canonical,
+    project it") and never `drive`, so nothing projected the lock and the swap
+    froze at TakerLockConfirmed forever — the Taker's LEZ locked, every refund
+    admitted, nothing sent (public testnet, swap 54184a0e, 2026-09-16). The fix
+    drives the projection first in the observation phases; the observer then
+    carries the swap through recovery on its own.
+
+    Reverse direction only (the Taker locks LEZ; the maker lock is Bitcoin, so
+    the harness controls when it lands). The recovery is left entirely to the
+    Node observer — the harness never drives the actor by hand — so a pass is
+    proof the patched observer completes it unaided."""
     if not REVERSE:
         raise Failure("this scenario needs --direction TakerSellsLez")
-    profile = require_fast_profile()
-    csv_blocks = int(profile["LEZ_BTC_REFUND_CSV_BLOCKS"])
-    # Median-time-past trails wall time by up to eleven blocks, and on an idle
-    # regtest chain sits hours behind: a block mined after the cutoff would
-    # still read as timely.
-    mine(11)
+    require_fast_profile()
     offer_id = publish_offer(stamp)
     swap_id, _ = take(offer_id, stamp)
     terms = taker_view(swap_id)["terms"]
     cutoff = int(terms["maker_second_lock_cutoff_unix_seconds"])
     opens = int(terms["later_refund_earliest_unix_seconds"])
-    log(f"  Maker cutoff at {time.strftime('%H:%M:%S', time.localtime(cutoff))}; "
-        f"the Taker's refund opens at {time.strftime('%H:%M:%S', time.localtime(opens))}")
-    log("  stopping the block miner: when the Maker's lock is included is this scenario's to decide")
-    docker("stop", "lez-btc-miner")
     before = node_balances("taker")
+    log("  stopping the Maker so its Bitcoin lock is not broadcast before the cutoff")
+    docker("stop", NODES["maker"][0])
+    maker_down = True
     try:
         lock(swap_id)
-        maker_lock = wait_mempool_transaction(timeout=max(30, cutoff - time.time() - 30))
-        log(f"  Maker's Bitcoin lock {maker_lock[:12]} is in the mempool; holding it past the cutoff")
-        wait_until(cutoff + 5, "for the cutoff to pass")
-        # Six empty blocks carry median-time-past over the cutoff; the seventh
-        # includes the lock, so its inclusion time is provably late.
-        for _ in range(6):
-            bitcoin("generateblock", MINER_ADDRESS, "[]")
+        wait_until(cutoff + 30, "for the Maker's cutoff to pass with no maker lock yet")
+        # Admit a refund while the maker lock is still absent: this is the
+        # branch that later short-circuited the observer.
+        reply = rpc("taker", "taker_swap_refund_v1", {
+            "schema_version": 1, "request_id": f"e2e-refund-{stamp}",
+            "swap_id": swap_id, "expected_generation": taker_view(swap_id)["progress_generation"]})
+        if "result" not in reply:
+            raise Failure(f"refund admission failed: {json.dumps(reply.get('error'))[:200]}")
+        log(f"  refund admitted at rev {taker_view(swap_id)['progress_generation']} (maker lock still absent)")
+        log("  restarting the Maker; it now broadcasts its lock after the cutoff (timely by median on regtest)")
+        docker("start", NODES["maker"][0])
+        maker_down = False
+        wait_healthy("maker")
+        maker_lock = wait_mempool_transaction(timeout=240)
         [block_hash] = bitcoin("generatetoaddress", "1", MINER_ADDRESS)
-        block = bitcoin("getblock", block_hash, "1")
-        if maker_lock not in block["tx"]:
-            raise Failure(f"block {block_hash[:12]} did not include the Maker's lock {maker_lock[:12]}")
-        median = int(block["mediantime"])
-        if median <= cutoff:
-            raise Failure(f"the lock's block median time {median} is not after the cutoff {cutoff}")
-        log(f"  Maker's lock included at median time {median}, {median - cutoff}s after the cutoff")
-        mine(csv_blocks + 1)  # the Maker's own CSV refund opens too, as it did on testnet
-        wait_until(opens + 5, "for the Taker's refund to open")
-        request_refund_until_terminal(swap_id, stamp, timeout=1800)
+        blk = bitcoin("getblock", block_hash, "1")
+        if maker_lock not in blk["tx"]:
+            raise Failure(f"block {block_hash[:12]} did not include the maker lock {maker_lock[:12]}")
+        log(f"  maker lock {maker_lock[:12]} included; block median {blk['mediantime']} vs cutoff {cutoff} "
+            f"({'timely' if int(blk['mediantime']) <= cutoff else 'late'} by median)")
+        mine(int(require_fast_profile()["LEZ_BTC_REFUND_CSV_BLOCKS"]) + 1)
+        # Hand off to the Node observer alone. Do NOT drive the actor from here;
+        # only wait (mining to advance regtest finality) for it to reach refunded.
+        wait_until(opens + 5, "for the Taker's LEZ refund window to open")
+        deadline = time.time() + 1800
+        while time.time() < deadline:
+            st = taker_view(swap_id)["state"]
+            if st == "refunded":
+                break
+            if st in ("completed", "attention_required"):
+                raise Failure(f"swap {swap_id[:12]} ended in {st}, not refunded")
+            mine(1)
+            time.sleep(30)
+        else:
+            raise Failure(f"the observer did not recover swap {swap_id[:12]} within 1800s "
+                          "(the admitted-refund short-circuit is unfixed)")
         after = node_balances("taker")
-        log(f"  Taker's LEZ refunded despite the late Maker lock; balances {before} → {after}")
+        log(f"  observer recovered the swap unaided; Taker balances {before} → {after}")
     finally:
-        docker("start", "lez-btc-miner")
+        if maker_down:
+            docker("start", NODES["maker"][0])
     return {"swap_id": swap_id, "maker_lock_txid": maker_lock, "cutoff": cutoff,
             "taker_balance_before": before, "taker_balance_after": after}
 
@@ -745,7 +765,7 @@ SCENARIOS = {
     "concurrent": scenario_concurrent,
     "taker-refund": scenario_taker_refund,
     "maker-refund": scenario_maker_refund,
-    "late-maker-lock": scenario_late_maker_lock,
+    "refund-then-maker-lock": scenario_refund_admitted_then_maker_lock,
     "regenerated-config": scenario_regenerated_config,
     "tampered-config": scenario_tampered_config,
 }
