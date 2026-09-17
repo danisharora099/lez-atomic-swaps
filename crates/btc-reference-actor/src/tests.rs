@@ -7865,6 +7865,11 @@ struct FixedLezRefundPort {
     custody_account: Hex32,
     state_only_state: EscrowState,
     clock_ms: u64,
+    // When set, report the finalized clock one block below the window end
+    // instead of at it. This models the ~1h finalized-clock lag on testnet: the
+    // refund is already finalized (irreversible) but the window end has not yet
+    // been finalized, so `window_end > clock`.
+    clock_below_window_end: bool,
     lookup: FixedLezRefundLookup,
     submission: Result<SubmissionOutcome, ActorCommandError>,
     prepare_calls: Arc<AtomicUsize>,
@@ -7891,6 +7896,7 @@ impl FixedLezRefundPort {
             custody_account: Hex32::from_bytes(*fixture.agreement.lez_terms().custody_account()),
             state_only_state,
             clock_ms,
+            clock_below_window_end: false,
             lookup,
             submission,
             prepare_calls: Arc::new(AtomicUsize::new(0)),
@@ -7946,6 +7952,11 @@ impl FixedLezRefundPort {
                 },
             ),
         ))
+    }
+
+    fn with_clock_below_window_end(mut self) -> Self {
+        self.clock_below_window_end = true;
+        self
     }
 
     fn found_refund(&self, request: &ObserveNativeRefundRequest) -> NativeRefundObservation {
@@ -8039,7 +8050,14 @@ impl LezRefundChainPort for FixedLezRefundPort {
                 NativeRefundObservationTarget::StateOnly => 3,
                 NativeRefundObservationTarget::Exact { window, .. }
                 | NativeRefundObservationTarget::DiscoverByTerms { window } => {
-                    window.start_height() + u64::from(window.max_blocks() - 1)
+                    let end = window.start_height() + u64::from(window.max_blocks() - 1);
+                    // One below the end still finalizes the refund (block
+                    // start+1) yet leaves the window end unfinalized.
+                    if self.clock_below_window_end {
+                        end - 1
+                    } else {
+                        end
+                    }
                 }
             },
             self.clock_ms,
@@ -8568,6 +8586,36 @@ async fn first_lock_lez_refund_is_taker_owned_crash_safe_and_observable() {
         .await
         .expect("Started first-lock LEZ restart observes only");
     assert_eq!(started_restart.submit_calls(), 0);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn first_lock_lez_refund_accepts_finalized_refund_inside_unfinalized_window() {
+    // Regression (public testnet, swap de229f88): the finalized clock lags the
+    // tip by ~1h, so a found, finalized refund can sit inside a window whose end
+    // is not yet finalized. That must still project terminal -- the old
+    // `refund_found#4:window_end_after_clock` looped the taker forever.
+    let accepted = ActorFixture::for_direction(SwapDirection::TakerSellsLez, ActorRole::Taker);
+    activate_and_project_taker_lock(&accepted).await;
+    let deadline = accepted.agreement.lez_terms().refund_at_ms();
+    let lagging_port = FixedLezRefundPort::new(
+        &accepted,
+        EscrowState::Refunded,
+        deadline + 1,
+        FixedLezRefundLookup::Found,
+        Err(ActorCommandError::ObservationUnavailable),
+    )
+    .with_clock_below_window_end();
+    let lagging_observer = LezRefundObserver {
+        config: accepted.config.clone(),
+        chain: lagging_port.clone(),
+        state_db: accepted.config.state_db.clone(),
+    };
+    let refunded = drive_admitted_first_lock_refund(&accepted, &lagging_observer)
+        .await
+        .expect("a finalized refund inside an unfinalized window still refunds");
+    assert_eq!(refunded.revision, 2);
+    assert_eq!(refunded.phase, ActorPhaseV1::Refunded);
+    assert_eq!(lagging_port.submit_calls(), 0);
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -9296,4 +9344,79 @@ async fn bitcoin_taker_leg_owner_sends_once_then_projects_terminal_refund() {
         durable_status(&fixture).terminal(),
         Some(BtcTerminalOutcome::Refunded)
     );
+}
+
+/// A Maker lock included after the signed cutoff is one `drive` refuses, so the
+/// safety read must admit recovery rather than report it uncertain: the latter
+/// parked a Taker's leg forever, with every refund request succeeding and none
+/// sent (public testnet, swap 54184a0e, 2026-09-16).
+#[test]
+fn late_maker_lock_admits_first_lock_recovery() {
+    fn inclusion(chain: Chain, unix_seconds: u64) -> CanonicalInclusionTimeV1 {
+        match chain {
+            Chain::Bitcoin => CanonicalInclusionTimeV1::Bitcoin {
+                median_time_unix_seconds: unix_seconds,
+            },
+            Chain::Lez => CanonicalInclusionTimeV1::Lez {
+                timestamp_ms: unix_seconds * 1_000,
+            },
+            other => panic!("maker never funds {other:?} on this pair"),
+        }
+    }
+    for direction in [
+        SwapDirection::TakerSellsLez,
+        SwapDirection::TakerSellsForeign,
+    ] {
+        let fixture = ActorFixture::for_direction(direction, ActorRole::Taker);
+        let agreement = &fixture.agreement;
+        let maker_chain = agreement.coordinator().funded_chain(Participant::Maker);
+        let cutoff = agreement
+            .body()
+            .recovery_plan()
+            .maker_second_lock_cutoff_unix_seconds();
+
+        let timely = inclusion(maker_chain, cutoff);
+        assert!(
+            classify_late_maker_lock(agreement, 1, maker_chain, &timely, "tx")
+                .expect("timely lock classifies")
+                .is_none(),
+            "{direction:?}: a lock at the cutoff is still timely"
+        );
+
+        let late = inclusion(maker_chain, cutoff + 1);
+        let reads: Vec<_> = [1_u8, 2]
+            .into_iter()
+            .map(|ordinal| {
+                classify_late_maker_lock(agreement, ordinal, maker_chain, &late, "tx")
+                    .expect("late lock classifies")
+                    .expect("{direction:?}: a late lock admits recovery")
+            })
+            .collect();
+        let evidence: Vec<&[u8]> = reads
+            .iter()
+            .map(|read| match read {
+                FirstLockRecoverySafetyObservation::ReadyToRefund {
+                    maker_chain: chain,
+                    cutoff_unix_seconds,
+                    observed_unix_seconds,
+                    absence_evidence,
+                } => {
+                    assert_eq!(*chain, maker_chain);
+                    assert_eq!(*cutoff_unix_seconds, cutoff);
+                    assert!(*observed_unix_seconds >= cutoff, "{direction:?}");
+                    assert!(absence_evidence.len() <= MAX_FIRST_LOCK_SAFETY_READ_BYTES);
+                    absence_evidence.as_slice()
+                }
+                other => panic!("{direction:?}: expected ReadyToRefund, got {other:?}"),
+            })
+            .collect();
+        assert_ne!(
+            evidence[0], evidence[1],
+            "{direction:?}: the two reads must differ for the admission to hold"
+        );
+        assert!(
+            classify_late_maker_lock(agreement, 3, maker_chain, &late, "tx").is_err(),
+            "{direction:?}: only reads 1 and 2 are admissible"
+        );
+    }
 }

@@ -16,6 +16,7 @@ under `runtime/e2e/<scenario>.json`, so CI can run them as separate jobs.
     node-e2e.py concurrent       two swaps interleaved end to end
     node-e2e.py taker-refund     Maker stopped before funding; Taker refunds its Bitcoin
     node-e2e.py maker-refund     Taker never claims; Maker refunds LEZ, then Taker refunds Bitcoin
+    node-e2e.py refund-then-maker-lock  Refund admitted, then a late-but-timely maker lock; the observer must still recover
     node-e2e.py regenerated-config  live btc-role.json rendered again, Taker Node restarted: the swap reloads and completes
     node-e2e.py tampered-config     the swap's copied taker-role-config.json altered: the swap is refused after a restart
     node-e2e.py all              every scenario in sequence (stops at the first failure)
@@ -595,6 +596,99 @@ def scenario_maker_refund(stamp: str) -> dict:
     return {"swap_id": swap_id}
 
 
+def wait_until(unix_seconds: float, describe: str) -> None:
+    remaining = unix_seconds - time.time()
+    if remaining > 0:
+        log(f"  waiting {int(remaining)}s {describe}")
+        time.sleep(remaining)
+
+
+def wait_mempool_transaction(timeout: float) -> str:
+    """The first transaction to reach Bitcoin Core's mempool. With the block
+    miner stopped nothing else is broadcast, so it is the Maker's lock."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        pool = bitcoin("getrawmempool")
+        if isinstance(pool, list) and pool:
+            return str(pool[0])
+        time.sleep(5)
+    raise Failure(f"no Maker lock reached the mempool within {int(timeout)}s; the scenario cannot make it late")
+
+
+def scenario_refund_admitted_then_maker_lock(stamp: str) -> dict:
+    """A refund admitted at revision one, then a maker lock that arrives after
+    the cutoff but is still timely by median time. The observer's admitted-
+    refund branch ran only `recover` (which observes: "the lock is canonical,
+    project it") and never `drive`, so nothing projected the lock and the swap
+    froze at TakerLockConfirmed forever — the Taker's LEZ locked, every refund
+    admitted, nothing sent (public testnet, swap 54184a0e, 2026-09-16). The fix
+    drives the projection first in the observation phases; the observer then
+    carries the swap through recovery on its own.
+
+    Reverse direction only (the Taker locks LEZ; the maker lock is Bitcoin, so
+    the harness controls when it lands). The recovery is left entirely to the
+    Node observer — the harness never drives the actor by hand — so a pass is
+    proof the patched observer completes it unaided."""
+    if not REVERSE:
+        raise Failure("this scenario needs --direction TakerSellsLez")
+    require_fast_profile()
+    offer_id = publish_offer(stamp)
+    swap_id, _ = take(offer_id, stamp)
+    terms = taker_view(swap_id)["terms"]
+    cutoff = int(terms["maker_second_lock_cutoff_unix_seconds"])
+    opens = int(terms["later_refund_earliest_unix_seconds"])
+    before = node_balances("taker")
+    # Stop the miner, not the Maker: the Maker broadcasts its Bitcoin lock on
+    # time (once the Taker's LEZ lock finalizes), but held out of a block it
+    # stays unconfirmed, so the Taker never observes a maker lock and routes to
+    # recovery at the cutoff. Confirming it afterwards makes it present and
+    # timely-by-median — exactly the wild condition (a slow inclusion), which a
+    # Maker held down past its own cutoff cannot reproduce (it refuses to lock).
+    log("  stopping the miner so the Maker's lock is broadcast on time but not yet confirmed")
+    docker("stop", "lez-btc-miner")
+    miner_down = True
+    try:
+        lock(swap_id)
+        maker_lock = wait_mempool_transaction(timeout=max(60, cutoff - int(time.time()) - 30))
+        log(f"  Maker's Bitcoin lock {maker_lock[:12]} is broadcast (in mempool), unconfirmed")
+        wait_until(cutoff + 30, "for the cutoff to pass with the maker lock still unconfirmed")
+        reply = rpc("taker", "taker_swap_refund_v1", {
+            "schema_version": 1, "request_id": f"e2e-refund-{stamp}",
+            "swap_id": swap_id, "expected_generation": taker_view(swap_id)["progress_generation"]})
+        if "result" not in reply:
+            raise Failure(f"refund admission failed: {json.dumps(reply.get('error'))[:200]}")
+        log(f"  refund admitted at rev {taker_view(swap_id)['progress_generation']} (maker lock still unconfirmed)")
+        [block_hash] = bitcoin("generatetoaddress", "1", MINER_ADDRESS)
+        blk = bitcoin("getblock", block_hash, "1")
+        if maker_lock not in blk["tx"]:
+            raise Failure(f"block {block_hash[:12]} did not include the maker lock {maker_lock[:12]}")
+        by_median = "timely" if int(blk["mediantime"]) <= cutoff else "late"
+        log(f"  maker lock confirmed; block median {blk['mediantime']} vs cutoff {cutoff} ({by_median} by median)")
+        mine(int(require_fast_profile()["LEZ_BTC_REFUND_CSV_BLOCKS"]) + 1)
+        # Hand off to the Node observer alone. Do NOT drive the actor from here;
+        # only wait (mining to advance regtest finality) for it to reach refunded.
+        wait_until(opens + 5, "for the Taker's LEZ refund window to open")
+        deadline = time.time() + 1800
+        while time.time() < deadline:
+            st = taker_view(swap_id)["state"]
+            if st == "refunded":
+                break
+            if st in ("completed", "attention_required"):
+                raise Failure(f"swap {swap_id[:12]} ended in {st}, not refunded")
+            mine(1)
+            time.sleep(30)
+        else:
+            raise Failure(f"the observer did not recover swap {swap_id[:12]} within 1800s "
+                          "(the admitted-refund short-circuit is unfixed)")
+        after = node_balances("taker")
+        log(f"  observer recovered the swap unaided; Taker balances {before} → {after}")
+    finally:
+        if miner_down:
+            docker("start", "lez-btc-miner")
+    return {"swap_id": swap_id, "maker_lock_txid": maker_lock, "cutoff": cutoff,
+            "taker_balance_before": before, "taker_balance_after": after}
+
+
 def taker_swap_directory(swap_id: str) -> str:
     """The Taker Node's per-swap directory (the record stores the swap id as bytes)."""
     reader = (
@@ -676,6 +770,7 @@ SCENARIOS = {
     "concurrent": scenario_concurrent,
     "taker-refund": scenario_taker_refund,
     "maker-refund": scenario_maker_refund,
+    "refund-then-maker-lock": scenario_refund_admitted_then_maker_lock,
     "regenerated-config": scenario_regenerated_config,
     "tampered-config": scenario_tampered_config,
 }
