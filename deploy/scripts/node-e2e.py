@@ -125,7 +125,7 @@ def wait_healthy(role: str, timeout: int = 180) -> None:
 def timing_profile() -> dict:
     values = {}
     for line in (RUNTIME / "runtime.env").read_text().splitlines():
-        if line.startswith(("LEZ_TIMING_PROFILE=", "LEZ_BTC_")):
+        if line.startswith(("LEZ_TIMING_PROFILE=", "LEZ_BTC_", "LEZ_LEZ_")):
             key, _, value = line.partition("=")
             values[key] = value
     return values
@@ -575,7 +575,11 @@ def scenario_maker_refund(stamp: str) -> dict:
         time.sleep(20)
     result = maker_action_with_fresh_generation("maker_actor_refund_v1", swap_id, f"e2e-maker-refund-{stamp}")
     log(f"  Maker refund queued: {json.dumps(result)[:160]}")
-    deadline = time.time() + 900
+    # The Maker asserts the absent lock only once its whole LEZ discovery window
+    # is finalized, so a flat 15-minute wait raced the chain and failed a refund
+    # the Node went on to complete. Size it from the profile's own window
+    # (devnet slots are 10 s) so the two cannot drift apart again.
+    deadline = time.time() + 10 * int(profile["LEZ_LEZ_DISCOVERY_MAX_BLOCKS"]) + 600
     while time.time() < deadline:
         phase = maker_phase(swap_id)
         log(f"  maker {swap_id[:12]}: {phase}")
