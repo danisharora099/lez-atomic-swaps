@@ -690,6 +690,14 @@ fn run_child(
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .process_group(0);
+    // The actor's trace is its only account of why an attempt returned without
+    // an effect. With a cleared environment and no stderr the Maker's actor
+    // could not be traced at all, while the Taker's always could.
+    if let Ok(trace) = std::env::var("LEZ_BTC_ACTOR_TRACE") {
+        command
+            .env("LEZ_BTC_ACTOR_TRACE", trace)
+            .stderr(Stdio::inherit());
+    }
     if !transfers_lock {
         command.stdin(Stdio::null());
     }
@@ -1218,6 +1226,38 @@ mod tests {
             "next_action": next_action
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn recover_that_projects_the_makers_own_lock_requeues_instead_of_failing() {
+        // `recover` past the cutoff first projects a Maker lock that was sent in
+        // time. Reported under its own command it is ordinary progress; under
+        // `drive` it failed the swap out of the poll set for good.
+        let projected = |command| {
+            effect(
+                command,
+                "observed_then_projected",
+                "both_legs_locked",
+                2,
+                "observe_revealing_claim",
+            )
+        };
+        let parsed = parse_effect(
+            &projected("recover"),
+            ActorEffectCommand::Recover,
+            MakerActorKindV1::Bitcoin,
+        )
+        .expect("recover's own projection is valid output");
+        assert!(!parsed.terminal);
+        assert_eq!(parsed.revision, 2);
+        assert!(
+            parse_effect(
+                &projected("drive"),
+                ActorEffectCommand::Recover,
+                MakerActorKindV1::Bitcoin,
+            )
+            .is_err()
+        );
     }
 
     #[test]
