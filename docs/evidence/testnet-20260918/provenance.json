@@ -1,0 +1,95 @@
+{
+  "captured_at_utc": "2026-09-18T05:37:03+00:00",
+  "networks": {
+    "lez": {
+      "network": "official LEZ testnet",
+      "release": "v0.2.4",
+      "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+      "escrow_program_id": "c22d61fc00d68083a01bc20c607423e015b9aeb862bbcdf7681b07848368221b",
+      "public_sequencer": "https://testnet.lez.logos.co"
+    },
+    "bitcoin": {
+      "network": "testnet4",
+      "core": "31.1"
+    }
+  },
+  "source": {
+    "repository": "gateway-fm/lez-atomic-swaps",
+    "recorded_run_commit": "aef75671",
+    "trace_build": {
+      "base_commit": "aef75671ed5c3cb4f806a6dc3cda4e3d17fe2b40",
+      "patch": "diagnostic-build.patch",
+      "contains": [
+        "#64 fixes",
+        "supervisor trace passthrough",
+        "claim-path trace notes"
+      ],
+      "does_not_contain": [
+        "#68 fix"
+      ]
+    },
+    "pinned_pre_trace_maker_actor_sha256_prefix": "22d685f656fddb3c"
+  },
+  "containers": {
+    "lez-testnet-maker-node": {
+      "image": "lez-maker-node:testnet-trace",
+      "image_id": "sha256:36b4ec7c9ad8678f8a678ca035185bbbf3eb50bc55e8b3bb89b8ec9fa3b6048f",
+      "started_at": "2026-09-17T13:30:06.343685128Z"
+    },
+    "lez-testnet-taker-node": {
+      "image": "lez-taker-node:testnet-trace",
+      "image_id": "sha256:8b76c9d989c0d84a9cdb6347af08240c52c6fae0ddce3848aa017b9ea7045294",
+      "started_at": "2026-09-17T13:30:12.078740589Z"
+    },
+    "lez-btc-testnet4": {
+      "image": "lez-bitcoin-core:local",
+      "image_id": "sha256:734ab4ac0661db56b3c9e4d8ed707361ac5059ba410169d4b260511120b1cd3d",
+      "started_at": "2026-09-17T13:25:25.045546136Z"
+    },
+    "lez-testnet-node": {
+      "image": "ghcr.io/logos-blockchain/logos-blockchain:testnet",
+      "image_id": "sha256:a85c380d3babf412d8e52facd51f3ef91e6b4e4f8404633fd230d770c597fe57",
+      "started_at": "2026-09-17T19:19:58.731593843Z"
+    },
+    "lez-testnet-indexer": {
+      "image": "lez-services:local",
+      "image_id": "sha256:a9d78c1795cbbe4e807d9e13ae9d6e993bff079d2bfb38ba75b1e277afd162d0",
+      "started_at": "2026-09-17T13:25:25.588681137Z"
+    },
+    "lez-testnet-sequencer": {
+      "image": "nginx:1.29.1-alpine",
+      "image_id": "sha256:35f3cbee4fb77c3efb39f2723a21ce181906139442a37de8ffc52d89641d9936",
+      "started_at": "2026-09-17T13:25:25.393324803Z"
+    }
+  },
+  "node_binaries_sha256": {
+    "maker": {
+      "lez-maker-node": "98cce001a9054cb86c1970ed0cc4d7fc7826b0f60fb417e29ab48ed84ebd46b8",
+      "lez-btc-maker-actor": "d85955b2cebf3439575b69053922f257a632a4556276835fef5ac205bbb0fde0"
+    },
+    "taker": {
+      "lez-taker-node": "22fe0643efbd5cfb5719bc7c2f692030063d16713d45684ec4c6cdba2cb32837",
+      "lez-btc-taker-actor": "1cb46e3b47b51022473ba187c0ef174fb7a3c7f4ae4597b151f29960d9734b06"
+    }
+  },
+  "interventions": [
+    {
+      "at_utc": "2026-09-17T13:25Z",
+      "what": "host crash; the six containers recreated on their preserved state (volumes and ~/lez-testnet)"
+    },
+    {
+      "at_utc": "2026-09-17T13:30Z",
+      "what": "both Nodes redeployed on the trace build; the Maker's two open swaps then fail actor_deployment_invalid (pinned actor hash)"
+    },
+    {
+      "at_utc": "2026-09-17T18:20Z",
+      "what": "Maker scheduler row for 158065f1 re-queued",
+      "how": "tools/revive-maker-row.sh, run by the operator"
+    },
+    {
+      "at_utc": "2026-09-17T19:19Z",
+      "what": "lez-testnet-node restarted after its slot counter froze"
+    }
+  ],
+  "captured_by": "tools/collect.py, docker logs; assembled by Claude Code at the operator's request"
+}

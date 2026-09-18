@@ -124,6 +124,20 @@ fi
 "$hadolint" --failure-threshold warning "${dockerfiles[@]}"
 
 for compose_file in "${compose_files[@]}"; do
+  # An override (compose.<name>.yaml next to a compose.yaml) is not a project
+  # on its own; validate it merged over its base file.
+  compose_args=(--file "$compose_file")
+  compose_dir="$(dirname "$compose_file")"
+  case "${compose_file##*/}" in
+    compose.*.yml|compose.*.yaml)
+      for base in "$compose_dir/compose.yaml" "$compose_dir/compose.yml"; do
+        if [[ -f "$base" ]]; then
+          compose_args=(--file "$base" --file "$compose_file")
+          break
+        fi
+      done
+      ;;
+  esac
   RUN_ID=ci-quality \
   LEZ_V02_IMAGE=lez-atomic-swaps-lez-v02:ci-quality \
   LEZ_V02_SOURCE_DIR=/tmp/lez-v02-ci-quality-source \
@@ -136,7 +150,7 @@ for compose_file in "${compose_files[@]}"; do
   BTC_RPC_PASSWORD="ci-quality-${RANDOM}-${RANDOM}" \
   LEZ_MARKET_ROOT=/tmp/lez-ci-quality-market \
     "$compose" --project-name "lez-ci-quality-${RANDOM}" \
-      --file "$compose_file" config --quiet
+      "${compose_args[@]}" config --quiet
 done
 
 echo "CI shell, workflow, Dockerfile, and Compose quality gates passed"

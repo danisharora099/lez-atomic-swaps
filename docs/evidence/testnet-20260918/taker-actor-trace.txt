@@ -1,0 +1,15 @@
+2026-09-17T13:30:15Z  x1648 {"event":"effect_reconcile","detail":"uncertain: no send"}
+2026-09-17T13:30:15Z  x1648 {"event":"refund_pending","detail":"bitcoin refund scan Immature; prepared effect present: true"}
+2026-09-17T17:23:44Z  x415  {"event":"drive_claim","detail":"role=Taker revision=2 transition=RevealingClaim chain=Lez"}
+2026-09-17T17:23:45Z  x414  {"event":"lez_claim_presence","detail":"transition=RevealingClaim effect_prepared=true presence=prefix_uncertain"}
+2026-09-17T17:23:45Z  x1    {"event":"effect_reconcile","detail":"exact_claim_safe: sending"}
+2026-09-17T17:23:45Z  x2    {"event":"effect_submission","detail":"accepted=true error=None"}
+2026-09-17T17:23:59Z  x413  {"event":"effect_reconcile","detail":"exact_claim_safe: no send"}
+2026-09-17T19:20:21Z  x1    {"event":"lez_claim_presence","detail":"transition=RevealingClaim effect_prepared=true presence=present_exact"}
+2026-09-17T19:20:21Z  x697  {"event":"effect_reconcile","detail":"present_exact: no send"}
+2026-09-17T19:20:37Z  x705  {"event":"drive_claim","detail":"role=Taker revision=3 transition=FollowupClaim chain=Bitcoin"}
+2026-09-17T19:20:37Z  x3    {"event":"btc_claim_scan","detail":"transition=FollowupClaim effect_prepared=false scan=unspent"}
+2026-09-17T19:21:23Z  x701  {"event":"btc_claim_scan","detail":"transition=FollowupClaim effect_prepared=false scan=exact finalized=false confirmations=0"}
+2026-09-17T21:22:06Z  x1    {"event":"effect_reconcile","detail":"eligible_to_attempt: sending"}
+2026-09-17T21:22:06Z  x1    {"event":"refund_pending","detail":"bitcoin refund scan Eligible; prepared effect present: true"}
+2026-09-17T23:35:19Z  x1    {"event":"btc_claim_scan","detail":"transition=FollowupClaim effect_prepared=false scan=exact finalized=true confirmations=12"}

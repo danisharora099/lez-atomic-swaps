@@ -244,6 +244,8 @@ pub enum BitcoinConnectivity {
     IsolatedLocal,
     /// Literal-loopback Regtest whose node has networking enabled.
     Networked,
+    /// Testnet4 over literal loopback or an exact HTTPS origin.
+    Testnet4Networked,
 }
 
 impl From<BitcoinConnectivity> for CoreConnectivityPolicy {
@@ -251,6 +253,7 @@ impl From<BitcoinConnectivity> for CoreConnectivityPolicy {
         match value {
             BitcoinConnectivity::IsolatedLocal => Self::IsolatedLocal,
             BitcoinConnectivity::Networked => Self::Networked,
+            BitcoinConnectivity::Testnet4Networked => Self::Testnet4Networked,
         }
     }
 }
