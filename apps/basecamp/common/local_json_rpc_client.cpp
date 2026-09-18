@@ -6,6 +6,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLocalSocket>
+#include <QDir>
+#include <QFile>
 
 #include <sys/stat.h>
 #include <unistd.h>
@@ -25,6 +27,44 @@ bool isOwnerSocket(const QByteArray& encodedPath)
     return !encodedPath.isEmpty() && ::lstat(encodedPath.constData(), &information) == 0
         && S_ISSOCK(information.st_mode) && information.st_uid == ::geteuid()
         && (information.st_mode & 07777) == 0600;
+}
+
+// Where the owner socket is, when nothing exported it.
+//
+// The desks are opened from Basecamp, which is launched from Finder or the
+// Dock; neither passes a shell environment, so requiring an exported variable
+// made an ordinary launch fail with "endpoint unavailable" no matter how
+// healthy the Node was. Resolution is therefore environment, then the user's
+// config file, then the conventional path that deploy/scripts/desk-sockets.py
+// already creates. The environment still wins so the Compose desk image keeps
+// pointing at its in-container socket without a config file.
+QByteArray resolveSocketPath(const QString& environmentVariable)
+{
+    const QString exported = qEnvironmentVariable(environmentVariable.toUtf8().constData());
+    if (!exported.isEmpty()) {
+        return exported.toUtf8();
+    }
+
+    // Only the two desk endpoints have a conventional location; anything else
+    // keeps the previous behaviour of requiring an explicit path.
+    QString role;
+    if (environmentVariable == QStringLiteral("LEZ_MAKER_RPC_SOCKET")) role = QStringLiteral("maker");
+    else if (environmentVariable == QStringLiteral("LEZ_TAKER_RPC_SOCKET")) role = QStringLiteral("taker");
+    if (role.isEmpty()) {
+        return {};
+    }
+
+    const QString desks = QDir::homePath() + QStringLiteral("/.lez/desks/");
+    QFile configuration(desks + QStringLiteral("config.json"));
+    if (configuration.open(QIODevice::ReadOnly)) {
+        const QJsonObject settings =
+            QJsonDocument::fromJson(configuration.read(64 * 1024)).object();
+        const QString configured = settings.value(role).toString();
+        if (!configured.isEmpty()) {
+            return configured.toUtf8();
+        }
+    }
+    return (desks + role + QStringLiteral(".sock")).toUtf8();
 }
 
 bool readMore(QLocalSocket& socket, QByteArray& response, qsizetype maximumMessageBytes,
@@ -51,7 +91,7 @@ LocalJsonRpcClient::LocalJsonRpcClient(QString environmentVariable, qsizetype ma
 
 QString LocalJsonRpcClient::call(const QString& method, const QString& parameterObjectJson) const
 {
-    const QByteArray socketPath = qEnvironmentVariable(environmentVariable_.toUtf8().constData()).toUtf8();
+    const QByteArray socketPath = resolveSocketPath(environmentVariable_);
     if (!socketPath.startsWith('/') || !isOwnerSocket(socketPath)) {
         return failure("endpoint_unavailable", "Owner-local Node endpoint is unavailable");
     }
