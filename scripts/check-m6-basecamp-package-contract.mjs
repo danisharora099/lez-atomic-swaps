@@ -196,6 +196,23 @@ requirePattern(
   /commonSource/,
   "must inject shared local-RPC and Chat bridge sources into both isolated package builds",
 );
+requirePattern(
+  rootFlake,
+  flakeSource,
+  /import \.\/common\/package-source\.nix/,
+  "must build every role package from the shared derived source",
+);
+// The per-role flakes are what a module catalog builds (`nix build
+// .#lgx-portable` inside the role directory); they must ship the same derived
+// source as the aggregate flake.
+for (const role of ["maker", "taker"]) {
+  const roleFlake = resolve(basecampRoot, role, "flake.nix");
+  const roleSource = read(roleFlake, `${role} catalog flake`);
+  requirePattern(roleFlake, roleSource, /import \.\.\/common\/package-source\.nix/, "must build the catalog package from the shared derived source");
+  requirePattern(roleFlake, roleSource, /roleSource\s*=\s*\.\/\./, "must derive the catalog package from this role directory");
+  requirePattern(roleFlake, roleSource, new RegExp(`role\\s*=\\s*"${role}"`), `must name the ${role} role`);
+  requirePattern(roleFlake, roleSource, /chat_module\.url\s*=\s*"github:logos-co\/logos-chat-module\/v0\.2\.2"/, "must pin the official Chat module v0.2.2 release");
+}
 for (const [pattern, message] of [
   [/withShortRuntimePath/, "must wrap both official UI checks with a short runtime path"],
   [/export TMPDIR=\/tmp\/lez-ui/, "must keep Qt local sockets below Linux's AF_UNIX path limit"],
@@ -258,10 +275,12 @@ const chatContractText = `${chatHeaderText ?? ""}\n${chatText ?? ""}`;
 const marketSourceFile = resolve(basecampRoot, "common/node_market.cpp");
 const marketText = read(marketSourceFile, "shared Node-market adapter");
 const kitDir = resolve(basecampRoot, "common/qml");
-const kitFiles = ["ActivityLog", "AmountLeg", "FieldLabel", "FilterTab", "LuxeButton", "LuxeCombo", "LuxeField", "Panel", "SectionTitle", "SideToggle", "StatusStrip", "SwapRow"];
+const kitFiles = ["ActivityLog", "AmountLeg", "FieldLabel", "FilterTab", "LuxeButton", "LuxeCombo", "LuxeField", "LuxeSlider", "Panel", "SectionTitle", "SideToggle", "StatusStrip", "SwapRow", "Timeline"];
 const kitText = kitFiles.map((name) => read(resolve(kitDir, `${name}.qml`), `shared UI kit ${name}`) ?? "").join("\n");
-const flakeText = read(resolve(basecampRoot, "flake.nix"), "consumer flake") ?? "";
-requirePattern(resolve(basecampRoot, "flake.nix"), flakeText, /commonSource\}\/qml\/\*\.qml \$out\/src\/qml\//, "must merge the shared UI kit into each package's QML view directory");
+const packageSourceFile = resolve(basecampRoot, "common/package-source.nix");
+const packageSourceText = read(packageSourceFile, "shared derived package source");
+requirePattern(packageSourceFile, packageSourceText, /commonSource\}\/qml\/\*\.qml \$out\/src\/qml\//, "must merge the shared UI kit into each package's QML view directory");
+requirePattern(packageSourceFile, packageSourceText, /qmllint[\s\S]*--json[\s\S]*\$out\/src\/qml\/\*\.qml[\s\S]*"import", "missing-type", "unresolved-type"[\s\S]*sys\.exit/, "must refuse a package whose view names a type the packaged QML directory cannot resolve");
 for (const [pattern, message] of [
   [/QLocalSocket/, "must use Qt's Unix-domain local socket client"],
   [/lstat\s*\(/, "must inspect the socket without following symlinks"],

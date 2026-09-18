@@ -379,7 +379,16 @@ Taker `taker-zurich-01`), the Bitcoin RPC cookie and, once
 `market-bootstrap.sh` has recorded the escrow deployment in
 `runner-work/market/market-bootstrap.env`, the `btc-role.json` that names the
 Bitcoin network, endpoints, wallet, policy, LEZ chain identity and the sidecar
-program. Chains are chosen only by those inputs. Each Node spawns one LEZ role
+program. Chains are chosen only by those inputs.
+
+By default a role's Bitcoin claims and refunds pay a key minted for that swap
+alone, so Core cannot see or spend the proceeds and each payout is unlinkable
+from the last. Set `LEZ_BTC_CLAIM_DESTINATION` to an address of the role's own
+wallet to pay there instead, which is how the LEZ leg has always behaved, or to
+`wallet` to take that address from `LEZ_BTC_WALLET` on first start and keep it.
+The desk stack does this, so a completed swap tops up the balance the desk
+shows. The two roles must not share an address: the agreement rejects a pair
+whose participants name the same claim destination. Each Node spawns one LEZ role
 sidecar per swap (own loopback port, capability, state directory and log under
 the swap directory; run id derived from the reservation id) because a sidecar
 holds one durable escrow and one claim reservation per state directory. The

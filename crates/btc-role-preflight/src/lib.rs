@@ -38,6 +38,8 @@ use zeroize::Zeroizing;
 
 const SPEC_SCHEMA_VERSION: u16 = 1;
 const MAX_JSON_BYTES: usize = 64 * 1024;
+/// Matches the SDK's own bound, which is private to its modules.
+const MAX_CLAIM_DESTINATION_SCRIPT_BYTES: usize = 520;
 const PRIVATE_DIRECTORY: &str = "private";
 const AGREEMENT_KEY_FILE: &str = "agreement.key";
 const REFUND_KEY_FILE: &str = "bitcoin-refund.key";
@@ -237,6 +239,10 @@ struct RoleBootstrapSpec {
 struct BitcoinIdentity {
     genesis_block_hash: String,
     required_confirmations: u32,
+    /// Optional script this role's claims and refunds pay into, hex-encoded.
+    /// Absent mints a fresh per-swap claim key instead.
+    #[serde(default)]
+    claim_destination_script_pubkey: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -355,6 +361,18 @@ pub fn bootstrap_role(spec_file: &Path, output_root: &Path) -> Result<RoleBootst
             )?,
         ),
         lez_owner_account: parse_hex32(&spec.lez_owner_account, "LEZ owner account")?,
+        bitcoin_claim_destination: spec
+            .bitcoin
+            .claim_destination_script_pubkey
+            .as_deref()
+            .map(|script| {
+                parse_hex_variable(
+                    script,
+                    "Bitcoin claim destination script",
+                    MAX_CLAIM_DESTINATION_SCRIPT_BYTES,
+                )
+            })
+            .transpose()?,
         expires_at_unix_seconds: spec.expires_at_unix_seconds,
     };
     Ok(bootstrap_role_in_process(&input, None, output_root)?.summary)
@@ -371,6 +389,9 @@ pub struct RoleBootstrapInput {
     pub bitcoin: BtcChainPolicyV1,
     pub lez: BtcLezChainIdentityV1,
     pub lez_owner_account: [u8; 32],
+    /// `None` mints a per-swap key, keeping payouts unlinkable but spendable
+    /// only through this role root.
+    pub bitcoin_claim_destination: Option<Vec<u8>>,
     pub expires_at_unix_seconds: u64,
 }
 
@@ -426,9 +447,12 @@ pub fn bootstrap_role_in_process(
     let agreement_public_key =
         compressed_public_key(&secp, &secrets.agreement, "agreement key")?.serialize();
     let refund_public_key = x_only_public_key(&secp, &secrets.refund, "refund key")?;
-    let claim_public_key = x_only_public_key(&secp, &secrets.claim, "claim key")?;
-    let claim_destination =
-        ScriptBuf::new_p2tr(&Secp256k1::verification_only(), claim_public_key, None).into_bytes();
+    let claim_destination = if let Some(script) = input.bitcoin_claim_destination.as_deref() {
+        script.to_vec()
+    } else {
+        let claim_public_key = x_only_public_key(&secp, &secrets.claim, "claim key")?;
+        ScriptBuf::new_p2tr(&Secp256k1::verification_only(), claim_public_key, None).into_bytes()
+    };
     let funding_public_key = x_only_public_key(&secp, &secrets.funding, "funding key")?;
     let adaptor_point = secrets
         .adaptor
@@ -491,7 +515,10 @@ pub fn bootstrap_role_in_process(
         secrets.agreement.as_ref(),
     )?;
     write_private_new(&private_root.join(REFUND_KEY_FILE), secrets.refund.as_ref())?;
-    write_private_new(&private_root.join(CLAIM_KEY_FILE), secrets.claim.as_ref())?;
+    // Only a minted destination has a key to keep.
+    if input.bitcoin_claim_destination.is_none() {
+        write_private_new(&private_root.join(CLAIM_KEY_FILE), secrets.claim.as_ref())?;
+    }
     write_private_new(
         &private_root.join(FUNDING_KEY_FILE),
         secrets.funding.as_ref(),
@@ -970,22 +997,29 @@ fn prepare_agreement_binding(
     let agreement_secret =
         read_secret_bytes(&private_root.join(AGREEMENT_KEY_FILE), "agreement key")?;
     let refund_secret = read_secret_bytes(&private_root.join(REFUND_KEY_FILE), "refund key")?;
-    let claim_secret = read_secret_bytes(&private_root.join(CLAIM_KEY_FILE), "claim key")?;
     let funding_secret = read_secret_bytes(&private_root.join(FUNDING_KEY_FILE), "funding key")?;
     let secp = Secp256k1::new();
     let identity = local.body().participant_identity();
+    // Only a minted destination has a key to re-derive and compare.
+    let claim_key_file = private_root.join(CLAIM_KEY_FILE);
+    let claim_destination_matches = if claim_key_file.exists() {
+        let claim_secret = read_secret_bytes(&claim_key_file, "claim key")?;
+        ScriptBuf::new_p2tr(
+            &Secp256k1::verification_only(),
+            x_only_public_key(&secp, &claim_secret, "claim key")?,
+            None,
+        )
+        .into_bytes()
+            == identity.claim_destination_script_pubkey()
+    } else {
+        true
+    };
     ensure!(
         compressed_public_key(&secp, &agreement_secret, "agreement key")?.serialize()
             == *identity.musig2_public_key()
             && x_only_public_key(&secp, &refund_secret, "refund key")?.serialize()
                 == *identity.bitcoin_refund_key()
-            && ScriptBuf::new_p2tr(
-                &Secp256k1::verification_only(),
-                x_only_public_key(&secp, &claim_secret, "claim key")?,
-                None,
-            )
-            .into_bytes()
-                == identity.claim_destination_script_pubkey()
+            && claim_destination_matches
             && x_only_public_key(&secp, &funding_secret, "funding key")?.serialize()
                 == *local.body().bitcoin_funding_key(),
         "role-private authority differs from the signed local contribution"

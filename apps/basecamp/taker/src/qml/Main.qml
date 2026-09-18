@@ -11,6 +11,10 @@ Item {
 
     readonly property var backend: logos.module("lez_atomic_swap_taker")
     property bool ready: false
+    // `ready` says the view module loaded, not that the Node answers; actions
+    // stayed enabled for hours over a dead endpoint, offering a claim whose
+    // window had closed. Cleared on a failed market read, set on a good one.
+    property bool nodeReachable: true
     property bool busy: false
     property string output: "No request sent yet"
     property bool rawVisible: false
@@ -154,6 +158,7 @@ Item {
         else root.noteMarketChanges(root.btcMarket, result)
         root.btcMarket = result
         root.btcMarketReady = true
+        root.nodeReachable = true
         
     }
     function refreshBtcMarket(silent) {
@@ -178,6 +183,7 @@ Item {
                         root.note("reply", "Refresh market · " + root.statusDetail)
                     }
                 } catch (error) {
+                    root.nodeReachable = false
                     if (!silent) {
                         root.output = String(value)
                         root.statusMode = "error"
@@ -189,6 +195,7 @@ Item {
             },
             function(error) {
                 root.btcMarketReads = Math.max(0, root.btcMarketReads - 1)
+                root.nodeReachable = false
                 if (!silent) {
                     root.output = "Backend failure: " + String(error)
                     root.statusMode = "error"
@@ -298,7 +305,9 @@ Item {
     function runTakerAction(swap) {
         if (root.btcMarketBusy || swap.can_act !== true) return
         root.btcMarketBusy = true
-        var requestId = "ui-taker-swap-action-" + String(Date.now())
+        // One id per swap and action: the Node keys replay on it, so a retry
+        // re-drives the admitted action instead of colliding with it.
+        var requestId = "ui-taker-swap-action-" + String(swap.ui_swap_id) + "-" + String(swap.action_required)
         root.run(root.backend.btcSwapAction(requestId, root.walletId(), String(swap.ui_swap_id), String(swap.action_required)),
             String(swap.action_label), function(result) {
                 root.btcMarketBusy = false
@@ -579,7 +588,7 @@ Item {
                                 delegate: SwapRow {
                                     Layout.fillWidth: true
                                     role: "taker"; counterpartyLabel: "MAKER"; actionObjectName: "takerSwapAction"
-                                    actionEnabled: root.ready && !root.btcMarketBusy
+                                    actionEnabled: root.ready && root.nodeReachable && !root.btcMarketBusy
                                     divider: root.firstDone(modelData) ? "DONE" : ""
                                     now: root.now
                                     detailsObjectName: "takerShowDetails"

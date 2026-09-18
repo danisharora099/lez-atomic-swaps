@@ -18,15 +18,12 @@
         cp ${commonSource}/node_market.h src/node_market.h
         cp ${commonSource}/node_market.cpp src/node_market.cpp
       '';
-      # The QML view directory is copied from the package source as-is, so
-      # the shared UI kit (common/qml) is merged into each role's src/qml in
-      # a derived source rather than injected at configure time.
       nixpkgsFor = system: logos-module-builder.inputs.nixpkgs.legacyPackages.${system};
-      withKit = system: role: (nixpkgsFor system).runCommand "lez-${role}-ui-source" {} ''
-        cp -r ${./. + "/${role}"} $out
-        chmod -R u+w $out
-        cp ${commonSource}/qml/*.qml $out/src/qml/
-      '';
+      withKit = system: role: import ./common/package-source.nix {
+        pkgs = nixpkgsFor system;
+        inherit role commonSource;
+        roleSource = ./. + "/${role}";
+      };
       packageFor = system: role: logos-module-builder.lib.mkLogosQmlModule {
         src = withKit system role;
         configFile = ./. + "/${role}/metadata.json";

@@ -1680,6 +1680,18 @@ async fn observe_dynamic_swaps(state: &TakerServiceState) {
         // still ahead, submits exactly once when both are met, then follows the
         // confirmations; the owner's request admitted it, the Node finishes it.
         if admitted_refund && !matches!(phase, Phase::Refunded | Phase::Completed) {
+            // A maker lock can arrive after the refund was admitted — a late
+            // broadcast that is still timely by median time. Recover then only
+            // observes ("the lock is canonical, project it") and nothing does,
+            // so the swap freezes at TakerLockConfirmed. Project it first in the
+            // phases where a drive observes a lock rather than reveals a claim
+            // (never BothLegsLocked); recovery then follows the correct leg.
+            // Without this a Taker whose refund was admitted before a late-but-
+            // timely maker lock stayed at revision one forever (public testnet,
+            // swap 54184a0e).
+            if taker_observation_phase(phase) {
+                let _ = config.observe().await;
+            }
             let _ = config.effect(TakerTerminalActionV1::Refund).await;
             drop(held_lock);
             continue;

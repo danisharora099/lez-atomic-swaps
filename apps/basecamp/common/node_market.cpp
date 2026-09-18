@@ -160,16 +160,21 @@ SwapRow takerRow(const QString& nodeState, const QString& availableAction, bool 
         return {"claim_ready", "Your " + theirChain + " claim is ready", 70,
                 "Your move — Claim " + theirs + " reveals the adaptor secret the Maker needs for its " + myChain + " claim",
                 claimAction, "Claim " + theirs};
+    // An admitted action stays retryable: the Node replays it by request id
+    // and re-drives the actor, so a stalled claim or refund has a way back
+    // other than the CLI. The desk used to show only a progress bar here.
     if (nodeState == "claim_in_progress")
         return {sellsBitcoin ? "claiming_lez" : "claiming_btc", theirChain + " claim submitted", 85,
-                "Your Node observes the claim; the Maker's follow-up " + myChain + " claim completes the swap", "", ""};
+                "Your Node observes the claim; the Maker's follow-up " + myChain + " claim completes the swap",
+                claimAction, "Retry claim"};
     if (nodeState == "completed")
         return {"completed", "Completed", 100, "Both legs settled on chain", "", ""};
     if (nodeState == "refund_available")
         return {"refund_ready", "Refund available", 60,
                 "The Maker did not lock in time; you may recover your " + myChain, refundAction, "Refund " + mine};
     if (nodeState == "refund_in_progress")
-        return {"refunding", "Refund submitted", 80, "Your Node observes the refund", "", ""};
+        return {"refunding", "Refund submitted", 80, "Your Node observes the refund; Retry re-drives it if it stalls",
+                refundAction, "Retry refund"};
     if (nodeState == "refunded")
         return {"refunded", "Refunded", 100, "Your " + myChain + " came back", "", ""};
     return {"attention_required", "Needs attention", 0,
@@ -186,14 +191,20 @@ SwapRow makerRow(const QString& phase, const QString& nextAction, const QString&
     const bool sellsLez = direction == QStringLiteral("taker_sells_foreign");
     const QString myChain = sellsLez ? "LEZ" : "Bitcoin";      // what this Maker locks
     const QString theirChain = sellsLez ? "Bitcoin" : "LEZ";   // what the Taker locks and the Maker claims
-    // A refunded leg is reported before any recovery routing: once this
-    // Maker's lock came back its actor still names the Taker's recovery as
-    // what is left to observe, which is not a missed lock window.
-    if (phase == "maker_leg_refunded")
-        return {"refunded", "Refunded", 100,
-                "Your " + myChain + " lock came back; the Taker's refund follows on its own", "", ""};
-    if (phase == "taker_leg_refunded" || phase == "refunded")
+    // A refunded leg is reported before any recovery routing (the actor still
+    // names the Taker's recovery as what is left to observe, which is not a
+    // missed lock window), but one refunded leg is not an unwound swap: until
+    // the actor is terminal the other leg is still owed. This desk once read
+    // "100% refunded" over a Taker whose LEZ never came back.
+    const bool unwound = scheduleState == QStringLiteral("terminal");
+    if (phase == "refunded" || (unwound && (phase == "maker_leg_refunded" || phase == "taker_leg_refunded")))
         return {"refunded", "Refunded", 100, "The swap was unwound", "", ""};
+    if (phase == "maker_leg_refunded")
+        return {"refunding", "Refunding", 80,
+                "Your " + myChain + " lock came back; the Taker's " + theirChain + " refund is still owed", "", ""};
+    if (phase == "taker_leg_refunded")
+        return {"refunding", "Refunding", 80,
+                "The Taker's " + theirChain + " lock came back; your " + myChain + " refund follows", "", ""};
     if (nextAction == QStringLiteral("recover_taker_leg"))
         return {"recovering", "Lock window missed", 55,
                 "Your Node could not lock in time; it recovers once the Taker's refund is final", "", ""};

@@ -23,7 +23,8 @@ future asset corridors return with their own milestone releases.
 - Logos Chat `v0.2.2` and its followed Delivery/module-builder inputs, exactly
   resolved by `flake.lock`;
 - Basecamp tag `0.2.0`, exact commit
-  `48b26c0d33573b5dd3695ae5868b04328f79e5c6` (internal `0.2.0-RC3`);
+  `48b26c0d33573b5dd3695ae5868b04328f79e5c6` (internal `0.2.0-RC3`), for the
+  isolated harness below and the Compose desk image;
 - enough disk for the measured roughly 2.75 GB Basecamp closure plus build
   intermediates, using a dedicated Nix store when other work shares the host.
 
@@ -60,6 +61,71 @@ the pinned Nix environment used by CI:
 ```sh
 npm run test:m6:basecamp
 ```
+
+## Compatible versions
+
+| Component | Version | Where it is used |
+|---|---|---|
+| Logos Basecamp | `0.2.0` (commit `48b26c0`) | CI integration harness and the Compose `basecamp-ui` desk image |
+| Logos Basecamp | `0.2.3` desktop (macOS arm64 portable build) | native install from the catalog, below |
+| Logos Chat module | `0.2.2` | pinned by `flake.lock`; the catalog installs the same release |
+| Logos Delivery module | `0.2.0` as pinned by Chat `0.2.2`; `0.2.1` as resolved from the official catalog | Chat's transport dependency |
+
+## Package layout
+
+Each role's view is its `src/qml/Main.qml` plus the shared UI kit in
+`common/qml`. Every flake that builds a role package, the aggregate flake here
+and the per-role flakes a module catalog builds (`maker/flake.nix`,
+`taker/flake.nix`), builds it from the derived source in
+`common/package-source.nix`, so every `.lgx` variant carries the kit next to
+`Main.qml`. That derivation runs `qmllint` over the packaged view against the
+pinned Qt and refuses the build if any import or type does not resolve: a view
+that would fail to compile in Basecamp fails to build instead. The per-role
+flakes carry no lock file; their inputs follow the pinned Chat release's own
+lock. `scripts/check-basecamp-lgx-kit.sh <package.lgx>` confirms a built or
+downloaded archive carries the kit in every variant.
+
+## Native Basecamp on macOS
+
+The desks' backends accept one thing: the absolute path of a Unix socket owned
+by the current user with mode `0600`, read from `LEZ_MAKER_RPC_SOCKET` or
+`LEZ_TAKER_RPC_SOCKET`. With the Nodes running in the Compose stack, their
+owner sockets live inside the Node containers, and Docker Desktop cannot share
+a container's socket with macOS. `deploy/scripts/desk-sockets.py` bridges them:
+it creates `~/.lez/desks/maker.sock` and `~/.lez/desks/taker.sock` (directory
+`0700`, sockets `0600`, owned by you) and relays each connection into the
+Node's socket with `docker exec lez-<role>-node socat`. It grants no new
+authority: whoever can run `docker exec` can already reach the Nodes.
+
+1. Start the stack (`deploy/scripts/up.sh`, or `start.sh` from the release
+   bundle) and wait until both Nodes report healthy.
+2. In one terminal, start the bridge and leave it running:
+
+   ```sh
+   deploy/scripts/desk-sockets.py
+   ```
+
+3. In a second terminal, start Basecamp from its executable so the desks'
+   backends inherit the variables (`open -a` starts the app from launchd, which
+   does not pass them):
+
+   ```sh
+   export LEZ_MAKER_RPC_SOCKET="$HOME/.lez/desks/maker.sock"
+   export LEZ_TAKER_RPC_SOCKET="$HOME/.lez/desks/taker.sock"
+   /Applications/LogosBasecamp.app/Contents/MacOS/LogosBasecamp
+   ```
+
+4. In **Settings → Package Repositories**, add
+   `https://raw.githubusercontent.com/mandrigin/logos-modules-release-base/main/logos-repo.json`
+   and install **LEZ / BTC Maker** and **LEZ / BTC Taker**; Chat and Delivery
+   install with them.
+5. Open **LEZ / BTC Maker** and press **Check Node**; the desk shows
+   **Node ready**. Do the same on **LEZ / BTC Taker**. A swap then follows the
+   role-owned action order below, or the per-scenario guides in
+   `docs/evidence/review-2026-09-12/REPRODUCE.md`.
+
+Running the Node binaries natively on macOS is not supported: the Nodes'
+process hardening is Linux-only.
 
 ## Install into isolated Basecamp user directories
 
