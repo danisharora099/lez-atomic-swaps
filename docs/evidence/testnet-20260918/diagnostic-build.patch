@@ -1,0 +1,351 @@
+diff --git a/crates/btc-reference-actor/src/lib.rs b/crates/btc-reference-actor/src/lib.rs
+index 8a4c67f..1bfcda6 100644
+--- a/crates/btc-reference-actor/src/lib.rs
++++ b/crates/btc-reference-actor/src/lib.rs
+@@ -1233,6 +1233,16 @@ impl CanonicalInclusionTimeV1 {
+                 .is_some_and(|cutoff_ms| *timestamp_ms <= cutoff_ms),
+         }
+     }
++
++    /// Inclusion time in whole seconds, the unit the recovery plan speaks.
++    const fn unix_seconds(&self) -> u64 {
++        match self {
++            Self::Bitcoin {
++                median_time_unix_seconds,
++            } => *median_time_unix_seconds,
++            Self::Lez { timestamp_ms } => *timestamp_ms / 1_000,
++        }
++    }
+ }
+ 
+ fn canonical_maker_lock_is_timely(
+@@ -1244,6 +1254,73 @@ fn canonical_maker_lock_is_timely(
+         && canonical_inclusion_time.is_at_or_before_cutoff(cutoff_unix_seconds)
+ }
+ 
++/// One safety read that found the Maker's lock included after the signed cutoff.
++#[derive(Clone, Debug, Serialize)]
++#[serde(deny_unknown_fields)]
++struct MakerLockLateEvidenceV1 {
++    schema_version: u16,
++    read_ordinal: u8,
++    agreement_commitment: String,
++    maker_chain: Chain,
++    cutoff_unix_seconds: u64,
++    late_lock_transaction_id: String,
++    inclusion: CanonicalInclusionTimeV1,
++}
++
++/// A canonical Maker lock that landed after the signed cutoff, seen from the
++/// Taker's first-lock recovery.
++///
++/// `drive` refuses such a lock as late and never projects it, so reporting it
++/// here as `Uncertain` left recovery waiting for a projection nobody would
++/// make: the Taker's leg stayed locked, every retry succeeded, and nothing was
++/// ever sent. The recovery plan already names the way out — a lock "refused as
++/// late leaves recovery to run" — and the timelock margin orders the Maker's
++/// refund before the Taker's, so admitting recovery here is the intended path,
++/// not a loosening. The late lock itself is the read's evidence.
++///
++/// Returns `None` for a timely lock, which the caller reports as ready.
++fn classify_late_maker_lock(
++    agreement: &BtcAgreementV1,
++    read_ordinal: u8,
++    maker_chain: Chain,
++    inclusion: &CanonicalInclusionTimeV1,
++    late_lock_transaction_id: &str,
++) -> Result<Option<FirstLockRecoverySafetyObservation>, ActorCommandError> {
++    let cutoff_unix_seconds = agreement
++        .body()
++        .recovery_plan()
++        .maker_second_lock_cutoff_unix_seconds();
++    if canonical_maker_lock_is_timely(maker_chain, inclusion, cutoff_unix_seconds) {
++        return Ok(None);
++    }
++    if !matches!(read_ordinal, 1 | 2) || inclusion.chain() != maker_chain {
++        return Err(ActorCommandError::AgreementBindingInvalid);
++    }
++    let observed_unix_seconds = inclusion.unix_seconds();
++    trace_note(
++        "first_lock_safety_late_lock",
++        &format!(
++            "{maker_chain:?} maker lock {late_lock_transaction_id} included at {observed_unix_seconds}, after cutoff {cutoff_unix_seconds}: recovery may run"
++        ),
++    );
++    let absence_evidence = serde_json::to_vec(&MakerLockLateEvidenceV1 {
++        schema_version: 1,
++        read_ordinal,
++        agreement_commitment: hex::encode(agreement.agreement_commitment()),
++        maker_chain,
++        cutoff_unix_seconds,
++        late_lock_transaction_id: late_lock_transaction_id.to_owned(),
++        inclusion: inclusion.clone(),
++    })
++    .map_err(trace_observation_unavailable)?;
++    Ok(Some(FirstLockRecoverySafetyObservation::ReadyToRefund {
++        maker_chain,
++        cutoff_unix_seconds,
++        observed_unix_seconds,
++        absence_evidence,
++    }))
++}
++
+ /// Canonical durable proof that a maker lock was included no later than the signed cutoff.
+ #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+ #[serde(deny_unknown_fields)]
+@@ -3689,6 +3766,14 @@ async fn drive_live(config: &ActorConfig) -> Result<ActorEffectOutputV1, ActorCo
+     let expected_chain = agreement
+         .coordinator()
+         .funded_chain(transition.funded_participant());
++    trace_note(
++        "drive_claim",
++        &format!(
++            "role={:?} revision={} transition={transition:?} chain={expected_chain:?}",
++            config.role,
++            durable.revision()
++        ),
++    );
+     match expected_chain {
+         Chain::Bitcoin => {
+             validate_activation_material(config, &agreement)?;
+@@ -7044,10 +7129,15 @@ fn validate_lez_refund_found(
+     ];
+     let same_height_wrong_hash = transaction.position.height == response.clock_after.height
+         && transaction.position.block_hash != response.clock_after.block_hash;
++    // A found refund only needs to sit inside its validity window and be
++    // finalized: height in [start, end] and height <= clock (LEZ finality is
++    // irreversibility, not depth, so a finalized height cannot be reorged out).
++    // Requiring the window's *end* to also be finalized is the Absent-case
++    // invariant and does not belong here: it stranded a completed, irreversible
++    // refund until the ~1h-lagging finalized clock passed the window end.
+     if account_state != Some(EscrowState::Refunded)
+         || transaction.position.height < window.start_height()
+         || transaction.position.height > end
+-        || end > response.clock_after.height
+         || transaction.position.height > response.clock_after.height
+         || same_height_wrong_hash
+         || !transaction.is_public
+@@ -7198,6 +7288,21 @@ where
+         }
+ 
+         let scan = self.chain.observe_claim(agreement).await;
++        trace_note(
++            "btc_claim_scan",
++            &format!(
++                "transition={transition:?} effect_prepared={} scan={}",
++                self.effect.is_some(),
++                match &scan {
++                    BitcoinClaimScan::Unspent => "unspent".to_owned(),
++                    BitcoinClaimScan::Uncertain => "uncertain".to_owned(),
++                    BitcoinClaimScan::Exact(exact) => format!(
++                        "exact finalized={} confirmations={}",
++                        exact.finalized, exact.confirmations
++                    ),
++                }
++            ),
++        );
+         if let Some(effect) = &self.effect {
+             self.reconcile_and_maybe_submit(agreement, effect, &scan)
+                 .await?;
+@@ -7340,6 +7445,20 @@ where
+             .chain
+             .classify_finalized_witnessed_claim(request)
+             .await?;
++        trace_note(
++            "lez_claim_presence",
++            &format!(
++                "transition={transition:?} effect_prepared={} presence={}",
++                self.effect.is_some(),
++                match &presence {
++                    FinalizedWitnessedClaimPresence::PresentExact { .. } => "present_exact",
++                    FinalizedWitnessedClaimPresence::PrefixUncertain { .. } => "prefix_uncertain",
++                    FinalizedWitnessedClaimPresence::NotFound { .. } => "not_found",
++                    FinalizedWitnessedClaimPresence::Unavailable(_) => "unavailable",
++                    FinalizedWitnessedClaimPresence::Uncertain(_) => "uncertain",
++                }
++            ),
++        );
+         match &presence {
+             FinalizedWitnessedClaimPresence::PresentExact {
+                 context,
+@@ -8402,21 +8521,18 @@ impl FirstLockRecoverySafetyPort for LiveLezMakerLockSafety {
+                 scanned_window,
+                 funding,
+             } => {
+-                let cutoff_unix_seconds = agreement
+-                    .body()
+-                    .recovery_plan()
+-                    .maker_second_lock_cutoff_unix_seconds();
+                 let inclusion = CanonicalInclusionTimeV1::Lez {
+                     timestamp_ms: funding.containing_block.timestamp_ms,
+                 };
+-                if !canonical_maker_lock_is_timely(maker_chain, &inclusion, cutoff_unix_seconds) {
+-                    trace_note(
+-                        "first_lock_safety_uncertain",
+-                        &format!(
+-                            "lez maker lock found but late: {inclusion:?} cutoff {cutoff_unix_seconds}"
+-                        ),
+-                    );
+-                    return Ok(FirstLockRecoverySafetyObservation::Uncertain { maker_chain });
++                let transaction_id = hex::encode(funding.transaction.transaction_id.as_bytes());
++                if let Some(late) = classify_late_maker_lock(
++                    agreement,
++                    read_ordinal,
++                    maker_chain,
++                    &inclusion,
++                    &transaction_id,
++                )? {
++                    return Ok(late);
+                 }
+                 let chain_evidence = encode_lez_maker_lock_found_evidence(
+                     &self.config,
+@@ -8430,8 +8546,7 @@ impl FirstLockRecoverySafetyPort for LiveLezMakerLockSafety {
+                 )?;
+                 Ok(FirstLockRecoverySafetyObservation::MakerLockReady {
+                     chain: maker_chain,
+-                    transaction_id: hex::encode(funding.transaction.transaction_id.as_bytes())
+-                        .into_boxed_str(),
++                    transaction_id: transaction_id.into_boxed_str(),
+                     confirmations: FINALIZED_LEZ_CONFIRMATION_UNITS,
+                     chain_evidence,
+                 })
+@@ -8589,15 +8704,18 @@ impl FirstLockRecoverySafetyPort for LiveBitcoinMakerLockSafety {
+         };
+         match observation {
+             FundingObservation::Ready(observed) => {
+-                let cutoff_unix_seconds = agreement
+-                    .body()
+-                    .recovery_plan()
+-                    .maker_second_lock_cutoff_unix_seconds();
+                 let inclusion = CanonicalInclusionTimeV1::Bitcoin {
+                     median_time_unix_seconds: observed.block_median_time_unix_seconds(),
+                 };
+-                if !canonical_maker_lock_is_timely(maker_chain, &inclusion, cutoff_unix_seconds) {
+-                    return Ok(FirstLockRecoverySafetyObservation::Uncertain { maker_chain });
++                let transaction_id = observed.transaction().compute_txid().to_string();
++                if let Some(late) = classify_late_maker_lock(
++                    agreement,
++                    read_ordinal,
++                    maker_chain,
++                    &inclusion,
++                    &transaction_id,
++                )? {
++                    return Ok(late);
+                 }
+                 let chain_evidence = BitcoinCoreEvidenceV1::funding_ready(agreement, &observed)
+                     .and_then(|evidence| evidence.encode())
+@@ -8609,11 +8727,7 @@ impl FirstLockRecoverySafetyPort for LiveBitcoinMakerLockSafety {
+                 )?;
+                 Ok(FirstLockRecoverySafetyObservation::MakerLockReady {
+                     chain: maker_chain,
+-                    transaction_id: observed
+-                        .transaction()
+-                        .compute_txid()
+-                        .to_string()
+-                        .into_boxed_str(),
++                    transaction_id: transaction_id.into_boxed_str(),
+                     confirmations: observed.confirmations(),
+                     chain_evidence,
+                 })
+diff --git a/crates/btc-reference-actor/src/tests.rs b/crates/btc-reference-actor/src/tests.rs
+index 9367783..56c2531 100644
+--- a/crates/btc-reference-actor/src/tests.rs
++++ b/crates/btc-reference-actor/src/tests.rs
+@@ -9297,3 +9297,78 @@ async fn bitcoin_taker_leg_owner_sends_once_then_projects_terminal_refund() {
+         Some(BtcTerminalOutcome::Refunded)
+     );
+ }
++
++/// A Maker lock included after the signed cutoff is one `drive` refuses, so the
++/// safety read must admit recovery rather than report it uncertain: the latter
++/// parked a Taker's leg forever, with every refund request succeeding and none
++/// sent (public testnet, swap 54184a0e, 2026-09-16).
++#[test]
++fn late_maker_lock_admits_first_lock_recovery() {
++    fn inclusion(chain: Chain, unix_seconds: u64) -> CanonicalInclusionTimeV1 {
++        match chain {
++            Chain::Bitcoin => CanonicalInclusionTimeV1::Bitcoin {
++                median_time_unix_seconds: unix_seconds,
++            },
++            Chain::Lez => CanonicalInclusionTimeV1::Lez {
++                timestamp_ms: unix_seconds * 1_000,
++            },
++            other => panic!("maker never funds {other:?} on this pair"),
++        }
++    }
++    for direction in [
++        SwapDirection::TakerSellsLez,
++        SwapDirection::TakerSellsForeign,
++    ] {
++        let fixture = ActorFixture::for_direction(direction, ActorRole::Taker);
++        let agreement = &fixture.agreement;
++        let maker_chain = agreement.coordinator().funded_chain(Participant::Maker);
++        let cutoff = agreement
++            .body()
++            .recovery_plan()
++            .maker_second_lock_cutoff_unix_seconds();
++
++        let timely = inclusion(maker_chain, cutoff);
++        assert!(
++            classify_late_maker_lock(agreement, 1, maker_chain, &timely, "tx")
++                .expect("timely lock classifies")
++                .is_none(),
++            "{direction:?}: a lock at the cutoff is still timely"
++        );
++
++        let late = inclusion(maker_chain, cutoff + 1);
++        let reads: Vec<_> = [1_u8, 2]
++            .into_iter()
++            .map(|ordinal| {
++                classify_late_maker_lock(agreement, ordinal, maker_chain, &late, "tx")
++                    .expect("late lock classifies")
++                    .expect("{direction:?}: a late lock admits recovery")
++            })
++            .collect();
++        let evidence: Vec<&[u8]> = reads
++            .iter()
++            .map(|read| match read {
++                FirstLockRecoverySafetyObservation::ReadyToRefund {
++                    maker_chain: chain,
++                    cutoff_unix_seconds,
++                    observed_unix_seconds,
++                    absence_evidence,
++                } => {
++                    assert_eq!(*chain, maker_chain);
++                    assert_eq!(*cutoff_unix_seconds, cutoff);
++                    assert!(*observed_unix_seconds >= cutoff, "{direction:?}");
++                    assert!(absence_evidence.len() <= MAX_FIRST_LOCK_SAFETY_READ_BYTES);
++                    absence_evidence.as_slice()
++                }
++                other => panic!("{direction:?}: expected ReadyToRefund, got {other:?}"),
++            })
++            .collect();
++        assert_ne!(
++            evidence[0], evidence[1],
++            "{direction:?}: the two reads must differ for the admission to hold"
++        );
++        assert!(
++            classify_late_maker_lock(agreement, 3, maker_chain, &late, "tx").is_err(),
++            "{direction:?}: only reads 1 and 2 are admissible"
++        );
++    }
++}
+diff --git a/crates/maker-node/src/actor_supervisor/runtime.rs b/crates/maker-node/src/actor_supervisor/runtime.rs
+index 230d1c6..fd36a66 100644
+--- a/crates/maker-node/src/actor_supervisor/runtime.rs
++++ b/crates/maker-node/src/actor_supervisor/runtime.rs
+@@ -690,6 +690,14 @@ fn run_child(
+         .stdout(Stdio::piped())
+         .stderr(Stdio::null())
+         .process_group(0);
++    // The actor's trace is its only account of why an attempt returned without
++    // an effect; with a cleared environment and no stderr the Maker's actor
++    // could not be traced at all (the Taker's always could).
++    if let Ok(trace) = std::env::var("LEZ_BTC_ACTOR_TRACE") {
++        command
++            .env("LEZ_BTC_ACTOR_TRACE", trace)
++            .stderr(Stdio::inherit());
++    }
+     if !transfers_lock {
+         command.stdin(Stdio::null());
+     }
