@@ -132,8 +132,8 @@ launched as in `docs/testnet-run.md` §2–5.
 |---|---|
 | `swaps/<id>.json` | [`tools/collect.py`](tools/collect.py), read-only: the Taker's `taker_swap_list_v1` view (state, effects, signed terms), the Maker's `maker_actor_monitor_v1`, the Maker's scheduler and manual-action rows, both actors' evidence kinds, effect journals and lock steps (SQLite opened `mode=ro` inside each Node container), then the chain lookups above. No key, nonce, adaptor secret or evidence payload is read |
 | `snapshot.json` | the same run of `collect.py`: capture time, Bitcoin tip, both Nodes' `*_wallet_balances_v1` |
-| `maker-actor-trace.log`, `taker-actor-trace.log` | `docker logs -t` of each Node container since the 09-17 13:30Z deploy, filtered to the actors' `LEZ_BTC_ACTOR_TRACE` events. Identical events are collapsed to their first timestamp (UTC) and a count; per-attempt block hashes are elided so repeats collapse. The Maker's covers `158065f1…` end to end |
-| `traced-swap-driver.log` | stdout of `tools/traced-swap.py`. Its last lines are its own 6-hour wait expiring; the swap completed after that, as the records show |
+| `maker-actor-trace.txt`, `taker-actor-trace.txt` | `docker logs -t` of each Node container since the 09-17 13:30Z deploy, filtered to the actors' `LEZ_BTC_ACTOR_TRACE` events. Identical events are collapsed to their first timestamp (UTC) and a count; per-attempt block hashes are elided so repeats collapse. The Maker's covers `158065f1…` end to end |
+| `traced-swap-driver.txt` | stdout of `tools/traced-swap.py`. Its last lines are its own 6-hour wait expiring; the swap completed after that, as the records show |
 | `tools/traced-swap.py` | the driver for `158065f1…`: publishes one offer, takes it, requests the lock, waits, requests the claim, waits. It imports the helpers of `deploy/scripts/node-e2e.py`, mines nothing and never calls a Maker action |
 | `tools/revive-maker-row.sh` | the one intervention on Node state, verbatim |
 | `diagnostic-build.patch` | `git diff aef7567 -- crates/` in the worktree the trace build was compiled from |
