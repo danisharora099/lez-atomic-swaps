@@ -1,0 +1,8 @@
+2026-09-19T20:49:12Z..2026-09-20T11:45:06Z x3039 {"event":"first_lock_safety_uncertain","detail":"lez finalized funding classification uncertain: Uncertain { context: MessageContext { schema_version: SchemaVersion, run_id: RunId(\"swap-<hash>\"), request_id: RequestId(\"<hash>\"), sidecar_role: Taker }, finalized_clock: ChainClock { block_hash: Hex32(\"<hash>\"), height: _, timestamp_ms: _ }, scanned_window: DiscoveryWindow(DiscoveryWindowWire { start_height: _, max_blocks: _ }) }"}
+2026-09-19T20:49:13Z..2026-09-20T07:39:03Z x2217 {"event":"refund_pending","detail":"bitcoin refund scan Immature; prepared effect present: false"}
+2026-09-19T20:49:13Z..2026-09-20T07:03:19Z x2163 {"event":"refund_pending","detail":"bitcoin refund scan Immature; prepared effect present: true"}
+2026-09-19T22:19:33Z {"event":"bitcoin_refund_observe_error","detail":"bitcoin refund observation failed: RequiredIndexNotReady(\"txindex\")"}
+2026-09-19T22:19:33Z {"event":"refund_pending","detail":"bitcoin refund scan Uncertain; prepared effect present: false"}
+2026-09-20T07:03:38Z..2026-09-20T07:49:54Z x2 {"event":"effect_submission","detail":"accepted=true error=None"}
+2026-09-20T07:03:38Z {"event":"refund_pending","detail":"bitcoin refund scan Eligible; prepared effect present: true"}
+2026-09-20T07:39:21Z {"event":"refund_pending","detail":"bitcoin refund scan Eligible; prepared effect present: false"}

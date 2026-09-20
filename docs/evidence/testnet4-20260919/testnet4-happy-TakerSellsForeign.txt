@@ -1,0 +1,19 @@
+START TakerSellsForeign 2026-09-19T10:53:36Z
+[12:53:36]   Maker published offer-e2e-1789815216
+[12:53:37]   Taker took offer-e2e-1789815216: swap 92c78b9867f9 (not_activated)
+SWAP 92c78b9867f9abd094c0678ff98a62a063305c2701862aa4aa835dbe34e13784
+[12:53:38]   Taker locked bitcoin: e18889a5525a (replay=False)
+LOCK e18889a5525ab0afd749f239452f3ef5f2be78e4581ad374e67b0c238b6d6378
+[12:53:38]   taker 92c78b9867f9: awaiting_first_lock (gen 0) | maker: queued
+[12:56:40]   taker 92c78b9867f9: awaiting_second_lock (gen 1) | maker: taker_lock_confirmed
+[15:08:43]   taker 92c78b9867f9: claim_available (gen 2) | maker: taker_lock_confirmed
+CLAIM_AVAILABLE gen 2
+[15:08:44]   taker 92c78b9867f9: claim_available (gen 2) | maker: taker_lock_confirmed
+[15:08:44]   Taker claimed LEZ (replay=False)
+TAKER_CLAIM_REQUESTED
+[15:08:45]   taker 92c78b9867f9: claim_in_progress (gen 2) | maker: taker_lock_confirmed
+[18:29:41]   taker 92c78b9867f9: completed (gen 4) | maker: completed
+TAKER_COMPLETED
+[18:29:41]   taker 92c78b9867f9: completed (gen 4) | maker: completed
+[18:29:41]   both Nodes report 92c78b9867f9 completed
+BOTH_COMPLETED 2026-09-19T16:29:41Z

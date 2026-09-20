@@ -1,0 +1,27 @@
+START refund TakerSellsLez 2026-09-19T07:20:39Z
+[09:20:39]   Maker published offer-e2e-refund-1789802439
+[09:20:42]   Taker took offer-e2e-refund-1789802439: swap e5876dc7869b (not_activated)
+SWAP e5876dc7869b549e70091c9e3195572a51f1c46a4d8face6c5c82a5109b34895
+[09:20:44]   Taker locked lez: 34ae69f358c0 (replay=False)
+LOCK 34ae69f358c04cae3544545813a5f3e7f4e39151b537a2a5a7557d94491d2370
+[09:20:44]   taker e5876dc7869b: awaiting_first_lock (gen 0) | maker: queued
+[10:29:27]   taker e5876dc7869b: awaiting_second_lock (gen 1) | maker: offered
+[10:48:56]   taker e5876dc7869b: claim_available (gen 2) | maker: taker_lock_confirmed
+BOTH_LOCKED 2026-09-19T08:48:56Z the Taker never claims; later refund time 16:20:39Z bitcoin refund height 153197
+STATE 2026-09-19T08:48:56Z taker claim_available gen 2 | maker taker_lock_confirmed
+STATE 2026-09-19T08:58:56Z taker claim_available gen 2 | maker both_legs_locked
+STATE 2026-09-19T13:29:04Z taker both_legs_locked gen 2 | maker both_legs_locked
+TAKER_REFUND_REQUEST 2026-09-19T16:29:10Z attempt 1 taker_action_unavailable
+TAKER_REFUND_REQUEST 2026-09-19T18:19:17Z attempt 12 taker_action_unavailable
+TAKER_REFUND_REQUEST 2026-09-19T20:19:24Z attempt 24 taker_action_unavailable
+TAKER_REFUND_REQUEST 2026-09-19T22:19:28Z attempt 36 taker_action_unavailable
+TAKER_REFUND_REQUEST 2026-09-20T00:19:32Z attempt 48 taker_action_unavailable
+TAKER_REFUND_REQUEST 2026-09-20T02:19:37Z attempt 60 taker_action_unavailable
+TAKER_REFUND_REQUEST 2026-09-20T04:19:41Z attempt 72 taker_action_unavailable
+TAKER_REFUND_REQUEST 2026-09-20T06:19:45Z attempt 84 taker_action_unavailable
+STATE 2026-09-20T07:49:48Z taker refund_available gen 3 | maker maker_leg_refunded
+TAKER_REFUND_REQUEST 2026-09-20T07:49:54Z attempt 93 admitted
+STATE 2026-09-20T07:59:54Z taker refund_in_progress gen 3 | maker maker_leg_refunded
+TAKER_REFUND_REQUEST 2026-09-20T08:20:18Z attempt 96 replayed
+STATE 2026-09-20T09:00:46Z taker refunded gen 4 | maker refunded
+BOTH_REFUNDED 2026-09-20T09:00:46Z

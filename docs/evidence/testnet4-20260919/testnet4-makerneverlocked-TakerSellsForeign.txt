@@ -1,0 +1,24 @@
+START TakerSellsForeign 2026-09-19T07:17:39Z
+[09:17:39]   Maker published offer-e2e-1789802259
+[09:17:41]   Taker took offer-e2e-1789802259: swap 0ffa32e3525b (not_activated)
+SWAP 0ffa32e3525b329c3670d4e873872a6e047308e332e23548a34fa4785ccdbe4b
+[09:17:41]   Taker locked bitcoin: 04ecab7ab5c0 (replay=False)
+LOCK 04ecab7ab5c0f1fc11f3aece54dc9df68e42beef312e4ace8143ec96b6980c97
+[09:17:41]   taker 0ffa32e3525b: awaiting_first_lock (gen 0) | maker: leased
+[10:38:56]   taker 0ffa32e3525b: awaiting_second_lock (gen 1) | maker: taker_lock_confirmed
+RESUMED for refund maker-never-locked 0ffa32e3525b329c3670d4e873872a6e047308e332e23548a34fa4785ccdbe4b 2026-09-19T10:17:57Z
+STATE 2026-09-19T10:17:57Z taker awaiting_second_lock gen 1 | maker taker_lock_confirmed
+TAKER_REFUND_REQUEST 2026-09-19T10:17:58Z attempt 1 admitted
+STATE 2026-09-19T10:27:58Z taker refund_in_progress gen 1 | maker taker_lock_confirmed
+TAKER_REFUND_REQUEST 2026-09-19T12:08:07Z attempt 12 replayed
+TAKER_REFUND_REQUEST 2026-09-19T14:08:20Z attempt 24 replayed
+TAKER_REFUND_REQUEST 2026-09-19T16:08:43Z attempt 36 replayed
+TAKER_REFUND_REQUEST 2026-09-19T18:09:01Z attempt 48 replayed
+TAKER_REFUND_REQUEST 2026-09-19T20:09:21Z attempt 60 replayed
+TAKER_REFUND_REQUEST 2026-09-19T22:09:37Z attempt 72 replayed
+TAKER_REFUND_REQUEST 2026-09-20T00:09:52Z attempt 84 replayed
+TAKER_REFUND_REQUEST 2026-09-20T02:10:09Z attempt 96 replayed
+TAKER_REFUND_REQUEST 2026-09-20T04:10:30Z attempt 108 replayed
+TAKER_REFUND_REQUEST 2026-09-20T06:10:50Z attempt 120 replayed
+TAKER_REFUND_REQUEST 2026-09-20T08:11:16Z attempt 132 replayed
+TAKER_REFUND_REQUEST 2026-09-20T10:11:58Z attempt 144 replayed

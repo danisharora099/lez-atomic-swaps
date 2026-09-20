@@ -1,0 +1,98 @@
+{
+  "swap_id": "0ffa32e3525b329c3670d4e873872a6e047308e332e23548a34fa4785ccdbe4b",
+  "route": {
+    "pair": "Bitcoin",
+    "direction": "TakerSellsForeign"
+  },
+  "foreign_units": 10000,
+  "lez_units": 10,
+  "taker": {
+    "state": "refund_in_progress",
+    "progress_generation": 1,
+    "effects": [
+      {
+        "revision": 1,
+        "kind": "taker_lock",
+        "chain": "Bitcoin",
+        "transaction_id": "04ecab7ab5c0f1fc11f3aece54dc9df68e42beef312e4ace8143ec96b6980c97",
+        "confirmations": 6
+      }
+    ],
+    "terms": {
+      "bitcoin_value_sat": 10000,
+      "lez_amount": 10,
+      "required_bitcoin_confirmations": 1,
+      "bitcoin_refund_height": 153196,
+      "maker_second_lock_cutoff_unix_seconds": 1789813059,
+      "earlier_refund_latest_unix_seconds": 1789823859,
+      "later_refund_earliest_unix_seconds": 1789834659
+    },
+    "actor": {
+      "evidence": [
+        {
+          "revision": 1,
+          "kind": "taker_lock"
+        }
+      ],
+      "effect_journal": [],
+      "maker_lock_steps": []
+    }
+  },
+  "maker": {
+    "schedule_state": "queued",
+    "attempt_count": 7260,
+    "observation": {
+      "state": "active",
+      "phase": "taker_lock_confirmed",
+      "revision": 1,
+      "next_action": "recover_taker_leg"
+    },
+    "effects": [
+      {
+        "revision": 1,
+        "kind": "taker_lock",
+        "chain": "Bitcoin",
+        "transaction_id": "04ecab7ab5c0f1fc11f3aece54dc9df68e42beef312e4ace8143ec96b6980c97",
+        "confirmations": 6
+      }
+    ],
+    "scheduler_row": {
+      "swap_id": "0ffa32e3525b329c3670d4e873872a6e047308e332e23548a34fa4785ccdbe4b",
+      "schedule_state": "queued",
+      "attempt_count": 7260,
+      "last_failure_class": null,
+      "created_at": 1789802261,
+      "updated_at": 1789904649
+    },
+    "manual_actions": [],
+    "actor": {
+      "evidence": [
+        {
+          "revision": 1,
+          "kind": "taker_lock"
+        }
+      ],
+      "effect_journal": [],
+      "maker_lock_steps": []
+    }
+  },
+  "bitcoin_verification": [
+    {
+      "txid": "04ecab7ab5c0f1fc11f3aece54dc9df68e42beef312e4ace8143ec96b6980c97",
+      "confirmations": 169,
+      "block_height": 153052,
+      "block_hash": "00000000001eed329711dd11ec2338c8d4436df83f5f8d8567bdc151e40698e3",
+      "spends": [
+        "83fb4d15ad954e04fc6d9852d6d74697465eb7369a0801a50f27710f961bee8a:0"
+      ],
+      "outputs_sat": [
+        10000,
+        300368
+      ],
+      "witness_items": [
+        1
+      ]
+    }
+  ],
+  "lez_verification": []
+}

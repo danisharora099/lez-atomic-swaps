@@ -1,0 +1,14 @@
+START refund TakerSellsForeign 2026-09-19T07:19:09Z
+[09:19:09]   Maker published offer-e2e-refund-1789802349
+[09:19:09]   take answered dependency-unavailable (initiation_execution_unavailable); retrying
+[09:19:20]   take answered dependency-unavailable (initiation_execution_unavailable); retrying
+[09:19:30]   take answered dependency-unavailable (initiation_execution_unavailable); retrying
+Traceback (most recent call last):
+  File "~/lez-testnet/evidence/v024-regression/testnet-refund.py", line 22, in <module>
+    swap_id, _ = e.take(offer, stamp)
+                 ~~~~~~^^^^^^^^^^^^^^
+  File "~/Desktop/las-logos/lez-atomic-swaps-testnet/deploy/scripts/node-e2e.py", line 214, in take
+    result = initiate(request)
+  File "~/Desktop/las-logos/lez-atomic-swaps-testnet/deploy/scripts/node-e2e.py", line 205, in initiate
+    raise Failure(f"taker taker_swap_initiate_v1 failed: {json.dumps(reply['error'])[:300]}")
+e2e.Failure: taker taker_swap_initiate_v1 failed: {"code": -32010, "message": "Taker dependency unavailable", "data": {"category": "initiation_execution_unavailable"}}

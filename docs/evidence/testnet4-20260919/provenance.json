@@ -1,0 +1,52 @@
+{
+  "captured_at_utc": "2026-09-20T11:44:17+00:00",
+  "networks": {
+    "lez": "official LEZ testnet v0.2.4 (channel 0101...01, escrow program c22d61fc00d68083a01bc20c607423e015b9aeb862bbcdf7681b07848368221b)",
+    "bitcoin": "testnet4, our own Bitcoin Core v31.1.0 (container lez-btc-testnet4, image sha256:734ab4ac0661db56b3c9e4d8ed707361ac5059ba410169d4b260511120b1cd3d), txindex"
+  },
+  "timing_profile_in_force": {
+    "maker_lock_cutoff_seconds": 10800,
+    "earlier_refund_seconds": 21600,
+    "later_refund_seconds": 32400,
+    "refund_csv_blocks": 144,
+    "lez_discovery_max_blocks": 2048,
+    "note": "the profile of the first public runs; findings C and D of the README replace it (deploy/testnet.env at 4fba3fc)"
+  },
+  "nodes": [
+    {
+      "role": "maker",
+      "period": "2026-09-19T00:03:39Z to the capture",
+      "image": "lez-maker-node:v024-stack2",
+      "image_id": "sha256:113a1c3d590b754387248f11591fb1a45bdf3d55ccc43ee11c347deafacef1a8",
+      "source_commit": "15440ff8318ba2483244f7d232e3c08d2edb4133",
+      "binaries_sha256": {
+        "lez-btc-maker-actor": "19e74a5ba59d7e2e1ce6fc1566af1f541daffed1575687eb5711f3b7daf8a541",
+        "lez-maker-node": "6b85566e88d7bbbbba8d52f37a7f11403f74b12d7962e44ab9e0cbdd747c504c"
+      }
+    },
+    {
+      "role": "taker",
+      "period": "2026-09-19T00:03Z to 20:49Z",
+      "image": "lez-taker-node:v024-stack2",
+      "image_id": "sha256:64cbb62632a96f5e9c2ad2f6fb79b6a51974b575873bb94c5803b215cf46009d",
+      "source_commit": "15440ff8318ba2483244f7d232e3c08d2edb4133"
+    },
+    {
+      "role": "taker",
+      "period": "2026-09-19T20:49:07Z to the capture",
+      "image": "lez-taker-node:v024-stack3",
+      "image_id": "sha256:a91ca10cd62a983a86cd7fa5267ab7a41940730eb1fa42acd4bc69bf71490e5a",
+      "source_commit": "d36fac7e4e806c2ab0e23603ffc070483a92c9c0",
+      "binaries_sha256": {
+        "lez-btc-taker-actor": "747d651eb5226dc15f6e692c7cda8b77b41a6fa705a4437e64dbd89cf46ffc92",
+        "lez-taker-node": "48fba81dfe0ae1e908ae0810d742444f0d4621ff3908b5d6a59b1cdd7aef9785"
+      }
+    }
+  ],
+  "side_services": "Logos Blockchain node :testnet, LEZ v0.2.4 indexer_service, nginx proxy to testnet.lez.logos.co (docs/testnet-run.md sections 3-5)",
+  "compose": "-p lez-testnet --env-file testnet.env -f compose.yaml -f compose.testnet.yaml, LEZ_BTC_ACTOR_TRACE=1",
+  "bitcoin_events": [
+    "nine-block reorganisation seen by our Core at 2026-09-19T08:38:46Z (153056 -> 153047, competing chain connected)",
+    "long runs of coinbase-only blocks"
+  ]
+}
