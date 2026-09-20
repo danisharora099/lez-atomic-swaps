@@ -166,7 +166,14 @@ if [[ "${LEZ_IMAGES:-build}" == pull || "${LEZ_IMAGES:-build}" == present ]]; th
   echo "[4/6] market: bootstrapped by start.sh from the tools image after this"
 else
   echo "[4/6] market (escrow program, vault claims, bootstrap manifest)…"
-  bash scripts/bootstrap-market.sh 2>&1 | tail -3
+  if ! bash scripts/bootstrap-market.sh 2>&1 | tail -3; then
+    # A new chain can stop finalizing within its first minute (README, "a frozen
+    # devnet"); the bootstrap then waits for its claims in vain and only another
+    # chain helps.
+    [[ "$FRESH_LEZ" == 1 && "${LEZ_FRESH_ATTEMPT:-1}" -lt 3 ]] || exit 1
+    echo "  the new chain does not finalize; recreating it once more"
+    LEZ_FRESH_ATTEMPT=$(( ${LEZ_FRESH_ATTEMPT:-1} + 1 )) exec bash "$0" --fresh-lez
+  fi
 fi
 after="$(sha256sum runtime/market-bootstrap.env 2>/dev/null | cut -c1-64 || true)"
 

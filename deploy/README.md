@@ -91,13 +91,17 @@ cleanly on SIGINT only, so compose stops them with it; `up.sh` then resumes the 
 chain. If one of them was killed anyway (a crash, `docker rm -f`) and does not come
 back, `up.sh --fresh-lez` recreates the LEZ chain and keeps Bitcoin and the wallets.
 
-The same command is the remedy for a frozen devnet. With LEZ v0.2.4 we have seen the
-local chain stop finalizing twice, each time from a Bedrock epoch boundary on: Bedrock
-drops every inscription of the sequencer (`0 transactions (N removed)` in its log, N
-growing), the indexer's finalized height stands still and every swap waits. It happens
-without any stop or restart and restarting the sequencer does not clear it; it is
-upstream behaviour, not ours. `node-e2e.py` checks that finality advances before each
-scenario for this reason.
+The same command is the remedy for a frozen devnet. With LEZ v0.2.4 the local chain
+stops finalizing after anything from a minute to a few hours: when the sequencer's inscription is in
+flight at the second a Bedrock epoch turns (every 100 s on upstream's devnet), Bedrock
+drops it and every one after it (`0 transactions (N removed)` in its log, N growing),
+the indexer's finalized height stands still and every swap waits. It happens without
+any stop or restart and restarting the sequencer does not clear it; it is upstream
+behaviour, not ours, and the epoch cannot be stretched (Bedrock's one leader then runs
+out of notes and stops making blocks). A new chain can die the same way within its
+first minute, so `up.sh --fresh-lez` recreates it again, three times at most, when the
+market bootstrap cannot finish. `node-e2e.py` checks that finality advances before
+each scenario for the same reason.
 
 `up.sh` ends with the repo-style UI verification (real Basecamp driven through
 its QML inspector against the live Maker and Taker Nodes). Skip with `SKIP_UI_VERIFY=1`.
