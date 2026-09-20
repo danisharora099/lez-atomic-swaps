@@ -185,7 +185,7 @@
   "bitcoin_verification": [
     {
       "txid": "0ab53be33505988aba014d123e4887d61ae654657b7c9d8524c317f7353c363d",
-      "confirmations": 121,
+      "confirmations": 165,
       "block_height": 153100,
       "block_hash": "00000000000000001254fbf0e33185af3c535bc23c21ff9d16f504cbe3bdf7c0",
       "spends": [
@@ -200,7 +200,7 @@
     },
     {
       "txid": "e18889a5525ab0afd749f239452f3ef5f2be78e4581ad374e67b0c238b6d6378",
-      "confirmations": 151,
+      "confirmations": 195,
       "block_height": 153070,
       "block_hash": "000000000000000173b8da3499742c2f1cbb426b41aa390199cd6a4785d423d9",
       "spends": [

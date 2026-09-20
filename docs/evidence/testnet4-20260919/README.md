@@ -13,12 +13,12 @@ holds no row for any of these swaps.
 | 2 | [`92c78b98…`](swaps/92c78b9867f9.json) | TakerSellsForeign | 10,000 sat / 10 LEZ | **completed** on both Nodes, 5 h 36 min |
 | 3 | [`46bc2860…`](swaps/46bc286081d3.json) | TakerSellsForeign | 20,000 sat / 20 LEZ | both locked, Taker never claimed: **both legs refunded** |
 | 4 | [`e5876dc7…`](swaps/e5876dc7869b.json) | TakerSellsLez | 10,000 sat / 10 LEZ | both locked, Taker never claimed: **both legs refunded** |
-| 5 | [`0ffa32e3…`](swaps/0ffa32e3525b.json) | TakerSellsForeign | 10,000 sat / 10 LEZ | the Maker never locked; **Taker refund still open at this capture** (see below) |
+| 5 | [`0ffa32e3…`](swaps/0ffa32e3525b.json) | TakerSellsForeign | 10,000 sat / 10 LEZ | the Maker never locked: **the Taker refunded its Bitcoin** |
 
 Everything here was read from the two Nodes and the chains at the time in
 `snapshot.json`. Every effect was sent exactly once (`attempt_count = 1` in both
 actors' journals). The LEZ balances ended where they began (Maker 280, Taker 320):
-two opposite trades and two refunds.
+two opposite trades and three refunds. All five swaps are terminal on both Nodes.
 
 This run found **three defects and one profile mistake**, all fixed in the same pull
 request (#88). They are the reason this folder is worth reading.
@@ -60,9 +60,10 @@ that carried transactions: for long stretches every block there is coinbase-only
 | Maker refund `cc1970ee…` | LEZ, block 15,854 | **Maker Node** | **none — unattended**, once the earlier refund time was final |
 | Taker refund [`ccd4f6a6…`](https://mempool.space/testnet4/tx/ccd4f6a66d7e417ed4d6e90f80fdf61ab2cf1b5c11ac3006c2dbb80fd110437d) | Bitcoin, block 153,198 | Taker Node | request `taker_swap_refund_v1` (admitted at 16:31:16Z on the 19th, replayed every ten minutes); the Node sent it at 07:03:38Z on the 20th, the moment it was eligible. Script-path spend (three-item witness), 19,000 sat out |
 
-The Taker reads `refunded`. **The Maker's row is still open** (`maker_leg_refunded`,
-waiting to see the Taker's refund): see defect B — the Maker has not been given that
-fix yet, so as not to replace its image while swap 5 is open.
+The Taker read `refunded` at 07:42Z. The Maker's row stayed open (`maker_leg_refunded`,
+looking for the Taker's refund) for ten more hours because of defect B, which the
+Maker had not been given so as not to replace its image while swap 5 was open. Nine
+seconds after the upgrade and re-pin of intervention 5 it read `refunded` too.
 
 ### 4. `e5876dc7…` — Taker sells LEZ, both refunded
 
@@ -77,12 +78,12 @@ Those 92 refusals are the design: once the claim window is closed and both legs 
 locked, the Taker Node offers its refund only after the Maker's leg is refunded. But
 see defect C: on chain, nothing held the Taker's LEZ back for those 15 hours.
 
-### 5. `0ffa32e3…` — the Maker never locked (open)
+### 5. `0ffa32e3…` — the Maker never locked, Taker refunded
 
 | Transaction | Chain | Created by | Trigger |
 |---|---|---|---|
 | Taker lock [`04ecab7a…`](https://mempool.space/testnet4/tx/04ecab7ab5c0f1fc11f3aece54dc9df68e42beef312e4ace8143ec96b6980c97) | Bitcoin, block 153,052 | Taker Node | request `taker_swap_lock_v1` |
-| Taker refund | Bitcoin | — | request `taker_swap_refund_v1` admitted 10:17:58Z on the 19th; **not sent yet** (profile mistake D) |
+| Taker refund [`7d4ae592…`](https://mempool.space/testnet4/tx/7d4ae59283e7287fa67116176b42002fbef96b6a24c81428ad48ab3b02f76538) | Bitcoin, block 153,259 | Taker Node | request `taker_swap_refund_v1` admitted 10:17:58Z on the 19th and replayed every ten minutes; the Node sent it at **17:24:14Z on the 20th**, the moment the Maker's lock was proven absent (profile mistake D). Script-path spend, 9,000 sat out. Both Nodes read `refunded` at 17:43:54Z |
 
 This was meant to be the happy swap and became a refund run because of defect A.
 
@@ -101,10 +102,10 @@ nine-block reorg at 08:38:46Z on the 19th. Swap 3's lock, planned at anchor 153,
 was mined at 153,052, and the adapter treated a confirmation below the anchor as
 impossible: `FundingAnchorMismatch`, "uncertain: no send", for good. The refund now
 waits for the height both roles signed instead. It was deployed to the Taker only
-(intervention 1); without it `ccd4f6a6…` would never have been sent. The Maker still
-runs the old code and shows the same error 5,643 times in
-[`maker-actor-trace.txt`](maker-actor-trace.txt) while it looks for that refund —
-which is why its row for swap 3 is open. Its own funds are long back.
+(intervention 1); without it `ccd4f6a6…` would never have been sent. The Maker ran
+the old code until intervention 5 and shows the same error 5,643 times in
+[`maker-actor-trace.txt`](maker-actor-trace.txt) while it looked for that refund —
+which is why its row for swap 3 stayed open. Its own funds were long back.
 
 **C. Nothing checked the order of the two refunds (fixed, `cfd0657`).** This run
 used the profile of the first public runs: LEZ refunds at 6 and 9 hours, one Bitcoin
@@ -116,14 +117,16 @@ refunded its LEZ and still claimed the Bitcoin. The delay is now per direction a
 Node refuses to load a profile whose block counts break the order its times promise.
 The corrected testnet profile is 96 / 37 blocks with the later refund at 16 hours.
 
-**D. The testnet profile holds swap 5's refund back (fixed, `4fba3fc`, configuration).**
+**D. The testnet profile held swap 5's refund back for ten hours (fixed, `4fba3fc`, configuration).**
 A Taker whose Maker never locked refunds only once its whole LEZ discovery window is
 finalized; that is what proves the lock absent. The profile kept the 2,048-block
-default, 34 hours at this network's block a minute. Swap 5's Bitcoin refund has been
-`Eligible` since 07:39Z on the 20th ([`taker-actor-trace.txt`](taker-actor-trace.txt))
-and waits for LEZ block 17,413 to be final, about 18:00Z. Nothing is at risk while it
-waits — the Node sends nothing — and it is left to resolve on its own; this folder
-will be updated when it does. New swaps use 480 blocks.
+default, 34 hours at this network's block a minute. Swap 5's Bitcoin refund was
+`Eligible` from 07:39Z on the 20th ([`taker-actor-trace.txt`](taker-actor-trace.txt))
+and waited for LEZ block 17,413 to be final. Nothing was at risk while it waited — the
+Node sends nothing — and it was left alone: at 17:24:14Z the answer went from
+`Uncertain` to a sent refund in one step
+([`taker-actor-trace-swap5-excerpt.txt`](taker-actor-trace-swap5-excerpt.txt)). New
+swaps use 480 blocks.
 
 ## Every intervention
 
@@ -145,6 +148,17 @@ will be updated when it does. New swaps use 480 blocks.
    The driver shows only `initiation_execution_unavailable`; the reason was read in
    the Taker Node's log, which intervention 1 discarded. It was retried at 20,000 sat.
 
+5. **Both Node images replaced at 17:47Z on the 20th, and swap 3 re-pinned on the
+   Maker.** Once swap 5 was terminal on both Nodes, both moved to `v024-stack4` (source
+   `cfd0657`, all four fixes) with the corrected profile; a Node with fix C would refuse
+   the old one. Swap 3, the only open row, stopped as `failed: actor_deployment_invalid`
+   as #73 describes, and `maker_actor_repin_v1` (request `repin-46bc286081d3-stack4`,
+   17:48:01Z) moved it to the new actor; it authorises no transaction. The Maker saw
+   the Taker's refund and closed the swap at 17:48:10Z. Replacing the containers
+   discarded their logs: the two trace files were taken at 11:45Z, and of the hours
+   after it only the excerpt for swap 5 was kept — a full trace should have been
+   written first.
+
 ## Verification
 
 `bitcoin_verification` in each record is `getrawtransaction` on our Core: block,
@@ -159,7 +173,7 @@ bytes is kept) and on the finalized indexer: all are found on both.
 | File | Written by |
 |---|---|
 | `swaps/*.json`, `snapshot.json` | [`tools/collect.py`](tools/collect.py), read-only: the Taker's view, the Maker's monitor, scheduler and manual-action rows, both actors' evidence kinds and effect journals (SQLite opened `mode=ro` inside each Node container), then the Bitcoin lookups. [`tools/verify-lez.py`](tools/verify-lez.py) adds `lez_verification`. No key, nonce, adaptor secret or evidence payload is read |
-| `maker-actor-trace.txt`, `taker-actor-trace.txt` | `docker logs -t` of each Node container through [`tools/trace.py`](tools/trace.py): the actors' `LEZ_BTC_ACTOR_TRACE` events with hashes and per-attempt clocks elided, a repeated event collapsed to its first and last timestamp (UTC) and a count |
+| `maker-actor-trace.txt`, `taker-actor-trace.txt` | taken at 11:45Z on the 20th (see intervention 5): `docker logs -t` of each Node container through [`tools/trace.py`](tools/trace.py): the actors' `LEZ_BTC_ACTOR_TRACE` events with hashes and per-attempt clocks elided, a repeated event collapsed to its first and last timestamp (UTC) and a count |
 | `testnet4-*.txt` | stdout of the drivers (bracketed timestamps are local, UTC+2; the others UTC) |
 | `tools/testnet-swap.py`, `testnet-refund.py`, `testnet-refund-resume.py` | the drivers. They import the helpers of `deploy/scripts/node-e2e.py`, mine nothing and never call a Maker action. The refund driver lets both roles lock, never claims, and asks for the Taker's refund every ten minutes from the later refund time on |
 | `provenance.json`, `SHA256SUMS` | generated at the end of the capture |

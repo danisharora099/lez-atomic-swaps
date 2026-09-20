@@ -81,13 +81,13 @@
     }
   },
   "maker": {
-    "schedule_state": "leased",
-    "attempt_count": 7197,
+    "schedule_state": "terminal",
+    "attempt_count": 9419,
     "observation": {
       "state": "active",
-      "phase": "maker_leg_refunded",
-      "revision": 3,
-      "next_action": "recover_taker_leg"
+      "phase": "refunded",
+      "revision": 4,
+      "next_action": "complete"
     },
     "effects": [
       {
@@ -112,6 +112,13 @@
         "confirmations": 1
       },
       {
+        "revision": 4,
+        "kind": "taker_refund",
+        "chain": "Bitcoin",
+        "transaction_id": "ccd4f6a66d7e417ed4d6e90f80fdf61ab2cf1b5c11ac3006c2dbb80fd110437d",
+        "confirmations": 67
+      },
+      {
         "revision": 0,
         "kind": "lez_initialize",
         "chain": "Lez",
@@ -121,11 +128,11 @@
     ],
     "scheduler_row": {
       "swap_id": "46bc286081d304eb346973e3b5b5a0f807cde07c69ff484cc6399f565410dfdc",
-      "schedule_state": "leased",
-      "attempt_count": 7197,
+      "schedule_state": "terminal",
+      "attempt_count": 9419,
       "last_failure_class": null,
       "created_at": 1789802526,
-      "updated_at": 1789904655
+      "updated_at": 1789926481
     },
     "manual_actions": [],
     "actor": {
@@ -141,6 +148,10 @@
         {
           "revision": 3,
           "kind": "maker_refund"
+        },
+        {
+          "revision": 4,
+          "kind": "taker_refund"
         }
       ],
       "effect_journal": [
@@ -174,7 +185,7 @@
   "bitcoin_verification": [
     {
       "txid": "bea2d7a2cf3e10fc22257624d525714bbd186de003e3c34d51907e8b920c710a",
-      "confirmations": 169,
+      "confirmations": 213,
       "block_height": 153052,
       "block_hash": "00000000001eed329711dd11ec2338c8d4436df83f5f8d8567bdc151e40698e3",
       "spends": [
@@ -190,7 +201,7 @@
     },
     {
       "txid": "ccd4f6a66d7e417ed4d6e90f80fdf61ab2cf1b5c11ac3006c2dbb80fd110437d",
-      "confirmations": 23,
+      "confirmations": 67,
       "block_height": 153198,
       "block_hash": "000000000000000080035387bf5d627a51916bfa249e215facde7fada37043af",
       "spends": [

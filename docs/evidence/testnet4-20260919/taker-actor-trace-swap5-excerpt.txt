@@ -1,0 +1,7 @@
+# Read at 17:36Z on 2026-09-20 with `docker logs --since 25m -t lez-testnet-taker-node`
+# through the same collapsing as tools/trace.py (first timestamp, last timestamp, count).
+# The container was replaced at 17:47Z before a full trace was written, so this
+# excerpt is all that is kept of the Taker's log between 11:45Z and 17:47Z.
+17:11:58 17:23:53 x40 {"event":"first_lock_safety_uncertain","detail":"lez finalized funding classification uncertain: Uncertain { … sidecar_role: Taker … }"}
+17:24:14 17:24:14 x1  {"event":"effect_submission","detail":"accepted=true error=None"}
+17:24:14 17:24:14 x1  {"event":"refund_pending","detail":"bitcoin refund scan Eligible; prepared effect present: true"}

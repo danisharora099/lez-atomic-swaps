@@ -1,9 +1,9 @@
 {
-  "captured_at_utc": "2026-09-20T11:44:17+00:00",
+  "captured_at_utc": "2026-09-20T17:48:35+00:00",
   "bitcoin": {
     "chain": "testnet4",
-    "blocks": 153220,
-    "bestblockhash": "000000000004f41094577549f0adc048c2c774a6d8600584d0fde695efcabbdb"
+    "blocks": 153264,
+    "bestblockhash": "000000000049989fcb947c65eb0a765f73e7662a9e62bd4e4e99ad604127dd50"
   },
   "wallets": {
     "maker": {
@@ -30,7 +30,7 @@
         "state": "available",
         "wallet": "lez-taker",
         "network": "testnet4",
-        "trusted_sat": 300613,
+        "trusted_sat": 309613,
         "untrusted_pending_sat": 0,
         "immature_sat": 0
       },

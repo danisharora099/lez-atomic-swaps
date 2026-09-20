@@ -1,5 +1,5 @@
 {
-  "captured_at_utc": "2026-09-20T11:44:17+00:00",
+  "captured_at_utc": "2026-09-20T17:48:35+00:00",
   "networks": {
     "lez": "official LEZ testnet v0.2.4 (channel 0101...01, escrow program c22d61fc00d68083a01bc20c607423e015b9aeb862bbcdf7681b07848368221b)",
     "bitcoin": "testnet4, our own Bitcoin Core v31.1.0 (container lez-btc-testnet4, image sha256:734ab4ac0661db56b3c9e4d8ed707361ac5059ba410169d4b260511120b1cd3d), txindex"
@@ -15,7 +15,7 @@
   "nodes": [
     {
       "role": "maker",
-      "period": "2026-09-19T00:03:39Z to the capture",
+      "period": "2026-09-19T00:03:39Z to 2026-09-20T17:47Z",
       "image": "lez-maker-node:v024-stack2",
       "image_id": "sha256:113a1c3d590b754387248f11591fb1a45bdf3d55ccc43ee11c347deafacef1a8",
       "source_commit": "15440ff8318ba2483244f7d232e3c08d2edb4133",
@@ -33,7 +33,7 @@
     },
     {
       "role": "taker",
-      "period": "2026-09-19T20:49:07Z to the capture",
+      "period": "2026-09-19T20:49:07Z to 2026-09-20T17:47Z",
       "image": "lez-taker-node:v024-stack3",
       "image_id": "sha256:a91ca10cd62a983a86cd7fa5267ab7a41940730eb1fa42acd4bc69bf71490e5a",
       "source_commit": "d36fac7e4e806c2ab0e23603ffc070483a92c9c0",
@@ -41,6 +41,19 @@
         "lez-btc-taker-actor": "747d651eb5226dc15f6e692c7cda8b77b41a6fa705a4437e64dbd89cf46ffc92",
         "lez-taker-node": "48fba81dfe0ae1e908ae0810d742444f0d4621ff3908b5d6a59b1cdd7aef9785"
       }
+    },
+    {
+      "role": "maker and taker",
+      "period": "2026-09-20T17:47Z to the capture",
+      "image": "lez-{maker,taker}-node:v024-stack4",
+      "image_id": {
+        "maker": "sha256:85c035afe28d34cc2ab93ac7a3eeac4a78ae1df2c981babee658a070299a50c4",
+        "taker": "sha256:ffcdf86bb614612a3d78fe50cc9fec36d746b00ab4150e8f74da342ea57d516d"
+      },
+      "source_commit": "cfd0657f04543e37e5eb1c704fe1a7d31a005cae",
+      "maker_actor_program_sha256": "628c6fe931da56475f30a652131fa0be4299872a70c6bb0626e02ee3a02319b7",
+      "profile": "deploy/testnet.env at 4fba3fc (96/37 blocks, later refund 16 h, discovery window 480)",
+      "note": "only swap 3's closing observation on the Maker ran here"
     }
   ],
   "side_services": "Logos Blockchain node :testnet, LEZ v0.2.4 indexer_service, nginx proxy to testnet.lez.logos.co (docs/testnet-run.md sections 3-5)",
