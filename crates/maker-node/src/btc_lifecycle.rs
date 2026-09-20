@@ -404,7 +404,12 @@ impl BtcMakerLifecycle {
         let contract = P2trSwapOutput::new(
             TwoPartyAggregateKey::from_bytes(participants.aggregate_internal_key()?)?,
             RefundXOnlyKey::from_bytes(*participants.for_participant(funder).bitcoin_refund_key())?,
-            CsvBlockDelay::new(self.runtime.config().bitcoin.refund_csv_blocks)?,
+            CsvBlockDelay::new(
+                self.runtime
+                    .config()
+                    .bitcoin
+                    .refund_csv_blocks_for(body.direction()),
+            )?,
         )?;
         ensure!(
             body.p2tr_terms() == &lez_btc_swap_sdk::BtcP2trTermsV1::from_contract(&contract),
@@ -556,6 +561,7 @@ fn internal(error: &dyn std::fmt::Display) -> ErrorObjectOwned {
 
 fn plan_is_acceptable(
     plan: &BtcSwapPlanV1,
+    direction: SwapDirection,
     runtime: &BtcRoleRuntime,
     reservation_id: &RequestId,
     now: u64,
@@ -565,7 +571,7 @@ fn plan_is_acceptable(
     if plan.lez_units != lez_units {
         return Err("plan LEZ amount differs from the offer quote");
     }
-    if plan.refund_csv_blocks != config.bitcoin.refund_csv_blocks {
+    if plan.refund_csv_blocks != config.bitcoin.refund_csv_blocks_for(direction) {
         return Err("plan CSV differs from policy");
     }
     if plan.claim_fee_sat != config.bitcoin.claim_fee_sat {
@@ -685,6 +691,7 @@ pub(super) async fn reserve(
         .map_err(invalid_request)?;
     plan_is_acceptable(
         &request.plan,
+        request.direction,
         &lifecycle.runtime,
         &request.reservation_id,
         now,

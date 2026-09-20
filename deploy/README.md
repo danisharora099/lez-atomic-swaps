@@ -228,18 +228,34 @@ self-hosted `lez-stack` runner).
 The refund scenarios need the `fast` timing profile:
 
 ```sh
-LEZ_TIMING_PROFILE=fast ./scripts/gen-config.sh runtime     # 6 CSV blocks; 600/900/1200 s deadlines, 60 s margin; 120-block LEZ window
+LEZ_TIMING_PROFILE=fast ./scripts/gen-config.sh runtime     # 15 and 8 CSV blocks; 600/900/1800 s deadlines, 60 s margin; 120-block LEZ window
 docker compose --env-file runtime/runtime.env up -d --no-deps --force-recreate maker-node taker-node
 ./scripts/node-e2e.py taker-refund
 ```
 
-`local` (the default) keeps network-like deadlines: 144 CSV blocks, a 30-minute
-Maker cutoff, 60- and 120-minute refund bounds, a 360-block LEZ discovery
-window. The profile is configuration only (`LEZ_BTC_*` and
-`LEZ_LEZ_DISCOVERY_MAX_BLOCKS` in `runtime.env`, rendered into each Node's
-`btc-role.json`); the protocol accepts any values with a positive margin and
-`later >= earlier + margin`, and Bitcoin refund maturity is a block count, so
-regtest mines past it.
+`local` (the default) keeps network-like deadlines: a 30-minute Maker cutoff,
+60- and 120-minute refund bounds, a 360-block LEZ discovery window. The profile
+is configuration only (`LEZ_BTC_*` and `LEZ_LEZ_DISCOVERY_MAX_BLOCKS` in
+`runtime.env`, rendered into each Node's `btc-role.json`).
+
+A Bitcoin refund delay is a block count and the rest of the schedule is seconds,
+and only the order of the two refunds protects either side: a Bitcoin claim has
+no deadline on chain. So the delay differs by direction (`refund_csv_blocks`
+when Bitcoin is the first lock, `second_lock_refund_csv_blocks` when it is the
+second), the profile states the pace the chain may keep (`block_seconds`), and a
+Node **refuses to start** on a profile that breaks any of three rules:
+
+- first lock: `blocks x fastest >= later` — the Taker's Bitcoin refund does not
+  mature before the later refund time;
+- second lock: `blocks x fastest >= earlier + margin` — the Maker's Bitcoin
+  refund does not mature inside the claim window, where it could race a
+  revealing claim;
+- second lock: `cutoff + blocks x slowest + margin <= later` — it matures before
+  the Taker's LEZ refund opens, after which the Taker could refund its LEZ and
+  still claim the Bitcoin.
+
+`local` uses 60 and 33 blocks, `fast` 15 and 8, both at the regtest miner's
+120 s; regtest still mines past a delay on demand.
 
 The LEZ discovery window sets how soon a refund can start when the Maker never
 locks: the Taker asserts the Maker lock's absence only once every block of the

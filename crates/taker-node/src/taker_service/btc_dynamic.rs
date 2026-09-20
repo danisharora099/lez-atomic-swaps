@@ -322,7 +322,7 @@ fn now_plan(
     Ok(BtcSwapPlanV1 {
         foreign_units,
         lez_units,
-        refund_csv_blocks: runtime.config().bitcoin.refund_csv_blocks,
+        refund_csv_blocks: runtime.config().bitcoin.refund_csv_blocks_for(direction),
         claim_fee_sat: runtime.config().bitcoin.claim_fee_sat,
         lez_refund_at_ms: refund_seconds * 1000,
         maker_second_lock_cutoff_unix_seconds: now + policy.maker_second_lock_cutoff_seconds,
