@@ -13,7 +13,7 @@ release workflow pushed to `ghcr.io/gateway-fm/lez-atomic-swaps/lez-*`.
 On an arm64 host with Docker (Apple silicon, or arm64 Linux):
 
 ```sh
-tar -xzf lez-swap-stack-v0.2.3-arm64.tar.gz && cd lez-swap-stack-v0.2.3-arm64
+tar -xzf lez-swap-stack-v0.2.4-arm64.tar.gz && cd lez-swap-stack-v0.2.4-arm64
 ./scripts/start.sh            # pull → wallet identities → config → stack → market bootstrap → UI suites
 ./scripts/start.sh --swap     # …and one full BTC → LEZ swap through the two Basecamp apps
 ```
@@ -90,6 +90,18 @@ A stop is safe for the LEZ chain: Bedrock, the sequencer and the indexer shut do
 cleanly on SIGINT only, so compose stops them with it; `up.sh` then resumes the same
 chain. If one of them was killed anyway (a crash, `docker rm -f`) and does not come
 back, `up.sh --fresh-lez` recreates the LEZ chain and keeps Bitcoin and the wallets.
+
+The same command is the remedy for a frozen devnet. With LEZ v0.2.4 the local chain
+stops finalizing after anything from a minute to a few hours: when the sequencer's inscription is in
+flight at the second a Bedrock epoch turns (every 100 s on upstream's devnet), Bedrock
+drops it and every one after it (`0 transactions (N removed)` in its log, N growing),
+the indexer's finalized height stands still and every swap waits. It happens without
+any stop or restart and restarting the sequencer does not clear it; it is upstream
+behaviour, not ours, and the epoch cannot be stretched (Bedrock's one leader then runs
+out of notes and stops making blocks). A new chain can die the same way within its
+first minute, so `up.sh --fresh-lez` recreates it again, three times at most, when the
+market bootstrap cannot finish. `node-e2e.py` checks that finality advances before
+each scenario for the same reason.
 
 `up.sh` ends with the repo-style UI verification (real Basecamp driven through
 its QML inspector against the live Maker and Taker Nodes). Skip with `SKIP_UI_VERIFY=1`.
@@ -220,18 +232,34 @@ self-hosted `lez-stack` runner).
 The refund scenarios need the `fast` timing profile:
 
 ```sh
-LEZ_TIMING_PROFILE=fast ./scripts/gen-config.sh runtime     # 6 CSV blocks; 600/900/1200 s deadlines, 60 s margin; 120-block LEZ window
+LEZ_TIMING_PROFILE=fast ./scripts/gen-config.sh runtime     # 15 and 8 CSV blocks; 600/900/1800 s deadlines, 60 s margin; 120-block LEZ window
 docker compose --env-file runtime/runtime.env up -d --no-deps --force-recreate maker-node taker-node
 ./scripts/node-e2e.py taker-refund
 ```
 
-`local` (the default) keeps network-like deadlines: 144 CSV blocks, a 30-minute
-Maker cutoff, 60- and 120-minute refund bounds, a 360-block LEZ discovery
-window. The profile is configuration only (`LEZ_BTC_*` and
-`LEZ_LEZ_DISCOVERY_MAX_BLOCKS` in `runtime.env`, rendered into each Node's
-`btc-role.json`); the protocol accepts any values with a positive margin and
-`later >= earlier + margin`, and Bitcoin refund maturity is a block count, so
-regtest mines past it.
+`local` (the default) keeps network-like deadlines: a 30-minute Maker cutoff,
+60- and 120-minute refund bounds, a 360-block LEZ discovery window. The profile
+is configuration only (`LEZ_BTC_*` and `LEZ_LEZ_DISCOVERY_MAX_BLOCKS` in
+`runtime.env`, rendered into each Node's `btc-role.json`).
+
+A Bitcoin refund delay is a block count and the rest of the schedule is seconds,
+and only the order of the two refunds protects either side: a Bitcoin claim has
+no deadline on chain. So the delay differs by direction (`refund_csv_blocks`
+when Bitcoin is the first lock, `second_lock_refund_csv_blocks` when it is the
+second), the profile states the pace the chain may keep (`block_seconds`), and a
+Node **refuses to start** on a profile that breaks any of three rules:
+
+- first lock: `blocks x fastest >= later` — the Taker's Bitcoin refund does not
+  mature before the later refund time;
+- second lock: `blocks x fastest >= earlier + margin` — the Maker's Bitcoin
+  refund does not mature inside the claim window, where it could race a
+  revealing claim;
+- second lock: `cutoff + blocks x slowest + margin <= later` — it matures before
+  the Taker's LEZ refund opens, after which the Taker could refund its LEZ and
+  still claim the Bitcoin.
+
+`local` uses 60 and 33 blocks, `fast` 15 and 8, both at the regtest miner's
+120 s; regtest still mines past a delay on demand.
 
 The LEZ discovery window sets how soon a refund can start when the Maker never
 locks: the Taker asserts the Maker lock's absence only once every block of the

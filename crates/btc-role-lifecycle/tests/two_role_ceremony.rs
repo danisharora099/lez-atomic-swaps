@@ -99,6 +99,7 @@ fn role_config(root: &Path, wallet: Option<&str>) -> std::path::PathBuf {
             "genesis_block_hash": "0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206",
             "required_confirmations": 2,
             "refund_csv_blocks": 144,
+            "second_lock_refund_csv_blocks": 7,
             "claim_fee_sat": 1000
         },
         "lez": {

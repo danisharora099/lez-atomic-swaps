@@ -1,0 +1,259 @@
+{
+  "swap_id": "92c78b9867f9abd094c0678ff98a62a063305c2701862aa4aa835dbe34e13784",
+  "route": {
+    "pair": "Bitcoin",
+    "direction": "TakerSellsForeign"
+  },
+  "foreign_units": 10000,
+  "lez_units": 10,
+  "taker": {
+    "state": "completed",
+    "progress_generation": 4,
+    "effects": [
+      {
+        "revision": 1,
+        "kind": "taker_lock",
+        "chain": "Bitcoin",
+        "transaction_id": "e18889a5525ab0afd749f239452f3ef5f2be78e4581ad374e67b0c238b6d6378",
+        "confirmations": 3
+      },
+      {
+        "revision": 2,
+        "kind": "maker_lock",
+        "chain": "Lez",
+        "transaction_id": "0c7349762173d69fd74b7a22787f46a4cdf7d89288d136834e9adb5a3f61671d",
+        "confirmations": 1
+      },
+      {
+        "revision": 3,
+        "kind": "revealing_claim",
+        "chain": "Lez",
+        "transaction_id": "c380283c0b47d5b41f8bc9570e469516dee907948c3a0074cf9074b4e2f2f434",
+        "confirmations": 1
+      },
+      {
+        "revision": 4,
+        "kind": "followup_claim",
+        "chain": "Bitcoin",
+        "transaction_id": "0ab53be33505988aba014d123e4887d61ae654657b7c9d8524c317f7353c363d",
+        "confirmations": 2
+      }
+    ],
+    "terms": {
+      "bitcoin_value_sat": 10000,
+      "lez_amount": 10,
+      "required_bitcoin_confirmations": 1,
+      "bitcoin_refund_height": 153213,
+      "maker_second_lock_cutoff_unix_seconds": 1789826016,
+      "earlier_refund_latest_unix_seconds": 1789836816,
+      "later_refund_earliest_unix_seconds": 1789847616
+    },
+    "actor": {
+      "evidence": [
+        {
+          "revision": 1,
+          "kind": "taker_lock"
+        },
+        {
+          "revision": 2,
+          "kind": "maker_lock"
+        },
+        {
+          "revision": 3,
+          "kind": "revealing_claim"
+        },
+        {
+          "revision": 4,
+          "kind": "followup_claim"
+        }
+      ],
+      "effect_journal": [
+        {
+          "chain": "lez",
+          "operation": "claim",
+          "predecessor_revision": 2,
+          "transaction_id": "c380283c0b47d5b41f8bc9570e469516dee907948c3a0074cf9074b4e2f2f434",
+          "state": "accepted",
+          "attempt_count": 1
+        }
+      ],
+      "maker_lock_steps": []
+    }
+  },
+  "maker": {
+    "schedule_state": "terminal",
+    "attempt_count": 961,
+    "observation": {
+      "state": "active",
+      "phase": "completed",
+      "revision": 4,
+      "next_action": "complete"
+    },
+    "effects": [
+      {
+        "revision": 1,
+        "kind": "taker_lock",
+        "chain": "Bitcoin",
+        "transaction_id": "e18889a5525ab0afd749f239452f3ef5f2be78e4581ad374e67b0c238b6d6378",
+        "confirmations": 2
+      },
+      {
+        "revision": 2,
+        "kind": "maker_lock",
+        "chain": "Lez",
+        "transaction_id": "0c7349762173d69fd74b7a22787f46a4cdf7d89288d136834e9adb5a3f61671d",
+        "confirmations": 1
+      },
+      {
+        "revision": 3,
+        "kind": "revealing_claim",
+        "chain": "Lez",
+        "transaction_id": "c380283c0b47d5b41f8bc9570e469516dee907948c3a0074cf9074b4e2f2f434",
+        "confirmations": 1
+      },
+      {
+        "revision": 4,
+        "kind": "followup_claim",
+        "chain": "Bitcoin",
+        "transaction_id": "0ab53be33505988aba014d123e4887d61ae654657b7c9d8524c317f7353c363d",
+        "confirmations": 1
+      },
+      {
+        "revision": 0,
+        "kind": "lez_initialize",
+        "chain": "Lez",
+        "transaction_id": "5056d5b714bbcb4f16d88d9dfcbe40d5b25d0a273f75138a512f555b1ad9561d",
+        "confirmations": 0
+      }
+    ],
+    "scheduler_row": {
+      "swap_id": "92c78b9867f9abd094c0678ff98a62a063305c2701862aa4aa835dbe34e13784",
+      "schedule_state": "terminal",
+      "attempt_count": 961,
+      "last_failure_class": null,
+      "created_at": 1789815217,
+      "updated_at": 1789835352
+    },
+    "manual_actions": [],
+    "actor": {
+      "evidence": [
+        {
+          "revision": 1,
+          "kind": "taker_lock"
+        },
+        {
+          "revision": 2,
+          "kind": "maker_lock"
+        },
+        {
+          "revision": 3,
+          "kind": "revealing_claim"
+        },
+        {
+          "revision": 4,
+          "kind": "followup_claim"
+        }
+      ],
+      "effect_journal": [
+        {
+          "chain": "bitcoin",
+          "operation": "claim",
+          "predecessor_revision": 3,
+          "transaction_id": "0ab53be33505988aba014d123e4887d61ae654657b7c9d8524c317f7353c363d",
+          "state": "accepted",
+          "attempt_count": 1
+        }
+      ],
+      "maker_lock_steps": [
+        {
+          "step": "lez.initialize",
+          "transaction_id": "5056d5b714bbcb4f16d88d9dfcbe40d5b25d0a273f75138a512f555b1ad9561d",
+          "submission_result": "accepted",
+          "state": "accepted",
+          "attempt_count": 1
+        },
+        {
+          "step": "lez.fund",
+          "transaction_id": "0c7349762173d69fd74b7a22787f46a4cdf7d89288d136834e9adb5a3f61671d",
+          "submission_result": "accepted",
+          "state": "accepted",
+          "attempt_count": 1
+        }
+      ]
+    }
+  },
+  "bitcoin_verification": [
+    {
+      "txid": "0ab53be33505988aba014d123e4887d61ae654657b7c9d8524c317f7353c363d",
+      "confirmations": 165,
+      "block_height": 153100,
+      "block_hash": "00000000000000001254fbf0e33185af3c535bc23c21ff9d16f504cbe3bdf7c0",
+      "spends": [
+        "e18889a5525ab0afd749f239452f3ef5f2be78e4581ad374e67b0c238b6d6378:1"
+      ],
+      "outputs_sat": [
+        9000
+      ],
+      "witness_items": [
+        1
+      ]
+    },
+    {
+      "txid": "e18889a5525ab0afd749f239452f3ef5f2be78e4581ad374e67b0c238b6d6378",
+      "confirmations": 195,
+      "block_height": 153070,
+      "block_hash": "000000000000000173b8da3499742c2f1cbb426b41aa390199cd6a4785d423d9",
+      "spends": [
+        "bea2d7a2cf3e10fc22257624d525714bbd186de003e3c34d51907e8b920c710a:1"
+      ],
+      "outputs_sat": [
+        264168,
+        10000
+      ],
+      "witness_items": [
+        1
+      ]
+    }
+  ],
+  "lez_verification": [
+    {
+      "transaction_id": "0c7349762173d69fd74b7a22787f46a4cdf7d89288d136834e9adb5a3f61671d",
+      "kind": "maker_lock",
+      "public_sequencer": {
+        "found": true,
+        "block_id": 15717,
+        "bytes_sha256": "3a3e1657faabba9908d2d658560d5e3821b66fcfa4b25fabe24ce81ff4488a9b"
+      },
+      "finalized_indexer": {
+        "found": true,
+        "hash": "0c7349762173d69fd74b7a22787f46a4cdf7d89288d136834e9adb5a3f61671d"
+      }
+    },
+    {
+      "transaction_id": "c380283c0b47d5b41f8bc9570e469516dee907948c3a0074cf9074b4e2f2f434",
+      "kind": "revealing_claim",
+      "public_sequencer": {
+        "found": true,
+        "block_id": 15784,
+        "bytes_sha256": "e7aa86ce6c362dee1e901bf45ac9499ba1ce1772115b98ee8242ca8253e1feb7"
+      },
+      "finalized_indexer": {
+        "found": true,
+        "hash": "c380283c0b47d5b41f8bc9570e469516dee907948c3a0074cf9074b4e2f2f434"
+      }
+    },
+    {
+      "transaction_id": "5056d5b714bbcb4f16d88d9dfcbe40d5b25d0a273f75138a512f555b1ad9561d",
+      "kind": "lez_initialize",
+      "public_sequencer": {
+        "found": true,
+        "block_id": 15653,
+        "bytes_sha256": "4feb2ef6d45c01df10854e829221a3cd118e9f1fa1edc2a614c7515f8ae8035a"
+      },
+      "finalized_indexer": {
+        "found": true,
+        "hash": "5056d5b714bbcb4f16d88d9dfcbe40d5b25d0a273f75138a512f555b1ad9561d"
+      }
+    }
+  ]
+}

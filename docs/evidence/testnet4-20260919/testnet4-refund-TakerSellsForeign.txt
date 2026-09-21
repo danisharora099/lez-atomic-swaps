@@ -1,0 +1,23 @@
+START refund TakerSellsForeign 2026-09-19T07:22:04Z
+[09:22:04]   Maker published offer-e2e-refund-1789802524
+[09:22:06]   Taker took offer-e2e-refund-1789802524: swap 46bc286081d3 (not_activated)
+SWAP 46bc286081d304eb346973e3b5b5a0f807cde07c69ff484cc6399f565410dfdc
+[09:22:06]   Taker locked bitcoin: bea2d7a2cf3e (replay=False)
+LOCK bea2d7a2cf3e10fc22257624d525714bbd186de003e3c34d51907e8b920c710a
+[09:22:06]   taker 46bc286081d3: awaiting_first_lock (gen 0) | maker: queued
+[10:38:56]   taker 46bc286081d3: awaiting_second_lock (gen 1) | maker: taker_lock_confirmed
+[12:50:49]   taker 46bc286081d3: claim_available (gen 2) | maker: both_legs_locked
+BOTH_LOCKED 2026-09-19T10:50:49Z the Taker never claims; later refund time 16:22:04Z bitcoin refund height 153197
+STATE 2026-09-19T10:50:50Z taker claim_available gen 2 | maker both_legs_locked
+STATE 2026-09-19T13:31:04Z taker both_legs_locked gen 2 | maker both_legs_locked
+STATE 2026-09-19T15:31:14Z taker refund_available gen 3 | maker maker_leg_refunded
+TAKER_REFUND_REQUEST 2026-09-19T16:31:16Z attempt 1 admitted
+STATE 2026-09-19T16:41:16Z taker refund_in_progress gen 3 | maker maker_leg_refunded
+TAKER_REFUND_REQUEST 2026-09-19T18:21:23Z attempt 12 replayed
+TAKER_REFUND_REQUEST 2026-09-19T20:21:31Z attempt 24 replayed
+TAKER_REFUND_REQUEST 2026-09-19T22:21:37Z attempt 36 replayed
+TAKER_REFUND_REQUEST 2026-09-20T00:21:42Z attempt 48 replayed
+TAKER_REFUND_REQUEST 2026-09-20T02:21:47Z attempt 60 replayed
+TAKER_REFUND_REQUEST 2026-09-20T04:21:53Z attempt 72 replayed
+TAKER_REFUND_REQUEST 2026-09-20T06:21:58Z attempt 84 replayed
+STATE 2026-09-20T07:42:02Z taker refunded gen 4 | maker maker_leg_refunded

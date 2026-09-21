@@ -97,7 +97,10 @@ if [[ "$btc_lifecycle_ready" == 1 ]]; then
     --arg actor "$actor_program" --arg actor_sha "$actor_sha" \
     --arg btc_network "${LEZ_BTC_NETWORK:-regtest}" \
     --arg lez_network "${LEZ_LEZ_NETWORK:-devnet}" \
-    --argjson csv "${LEZ_BTC_REFUND_CSV_BLOCKS:-144}" \
+    --argjson csv "${LEZ_BTC_REFUND_CSV_BLOCKS:-60}" \
+    --argjson csv_second "${LEZ_BTC_SECOND_LOCK_REFUND_CSV_BLOCKS:-33}" \
+    --argjson block_fastest "${LEZ_BTC_BLOCK_SECONDS_FASTEST:-120}" \
+    --argjson block_slowest "${LEZ_BTC_BLOCK_SECONDS_SLOWEST:-120}" \
     --argjson cutoff "${LEZ_BTC_MAKER_LOCK_CUTOFF_SECONDS:-1800}" \
     --argjson earlier "${LEZ_BTC_EARLIER_REFUND_SECONDS:-3600}" \
     --argjson later "${LEZ_BTC_LATER_REFUND_SECONDS:-7200}" \
@@ -110,7 +113,9 @@ if [[ "$btc_lifecycle_ready" == 1 ]]; then
     {schema_version:1, swaps_root:$swaps,
      bitcoin:{network:$btc_network, endpoint:"http://127.0.0.1:18443/", cookie_file:$cookie, wallet:$wallet,
               claim_destination_address:$claim_destination,
-              genesis_block_hash:$btc_genesis, required_confirmations:1, refund_csv_blocks:$csv, claim_fee_sat:1000,
+              genesis_block_hash:$btc_genesis, required_confirmations:1, refund_csv_blocks:$csv,
+              second_lock_refund_csv_blocks:$csv_second,
+              block_seconds:{fastest:$block_fastest, slowest:$block_slowest}, claim_fee_sat:1000,
               lock_fee:{confirmation_target:$fee_target, fallback_sat_per_vb:$fee_fallback,
                         max_sat_per_vb:$fee_max_rate, max_percent_of_value:$fee_max_percent}},
      lez:{network:$lez_network, channel_id:$channel, genesis_block_hash:$genesis, escrow_program_id:$program,

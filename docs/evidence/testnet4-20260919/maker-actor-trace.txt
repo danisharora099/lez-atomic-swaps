@@ -1,0 +1,13 @@
+2026-09-19T01:02:28Z..2026-09-19T08:29:41Z x2 {"event":"bitcoin_maker_step_observation","detail":"absent"}
+2026-09-19T01:02:35Z..2026-09-19T08:48:39Z x836 {"event":"bitcoin_maker_step_observation","detail":"pending"}
+2026-09-19T02:05:55Z..2026-09-19T08:48:59Z x2 {"event":"bitcoin_maker_step_observation","detail":"unspent"}
+2026-09-19T03:01:07Z..2026-09-20T07:39:25Z x2 {"event":"effect_submission","detail":"accepted=true error=None"}
+2026-09-19T08:48:55Z..2026-09-19T12:29:25Z x18 {"event":"observation_unavailable","error":"Remote(RemoteProtocolError { context: MessageContext { schema_version: SchemaVersion, run_id: RunId(\"swap-<hash>\"), request_id: RequestId(\"<hash>\"), sidecar_role: Maker }, code: MovingTip, message: \"[REDACTED]\" })"}
+2026-09-19T09:42:59Z..2026-09-19T13:08:35Z x420 {"event":"lez_maker_funding_step_presence","detail":"uncertain"}
+2026-09-19T10:17:54Z..2026-09-20T11:45:07Z x6602 {"event":"first_lock_safety_uncertain","detail":"lez finalized funding classification uncertain: Uncertain { context: MessageContext { schema_version: SchemaVersion, run_id: RunId(\"swap-<hash>\"), request_id: RequestId(\"<hash>\"), sidecar_role: Maker }, finalized_clock: ChainClock { block_hash: Hex32(\"<hash>\"), height: _, timestamp_ms: _ }, scanned_window: DiscoveryWindow(DiscoveryWindowWire { start_height: _, max_blocks: _ }) }"}
+2026-09-19T10:23:08Z..2026-09-19T10:50:11Z x3 {"event":"first_lock_recovery_lock_observation","detail":"own lock not projected before recovery: ObservationUnavailable"}
+2026-09-19T10:50:30Z..2026-09-19T13:08:59Z x2 {"event":"lez_maker_funding_step_presence","detail":"found"}
+2026-09-19T13:20:48Z..2026-09-20T07:38:58Z x2330 {"event":"refund_pending","detail":"bitcoin refund scan Immature; prepared effect present: true"}
+2026-09-19T15:22:38Z..2026-09-20T11:45:11Z x5643 {"event":"bitcoin_refund_observe_error","detail":"bitcoin refund observation failed: FundingAnchorMismatch"}
+2026-09-19T15:22:38Z..2026-09-20T11:45:11Z x5643 {"event":"refund_pending","detail":"bitcoin refund scan Uncertain; prepared effect present: false"}
+2026-09-20T07:39:25Z {"event":"refund_pending","detail":"bitcoin refund scan Eligible; prepared effect present: true"}

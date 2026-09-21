@@ -211,9 +211,12 @@ rm -f "$RUNTIME/runtime.env"
 # Recovery timing profile for the Node-owned Bitcoin lifecycle. `local` keeps
 # network-like deadlines; `fast` shortens them so refund and abandonment paths
 # can be exercised in minutes (Bitcoin CSV maturity is a block count, mined on
-# demand on regtest; the LEZ deadlines are wall-clock). The protocol accepts any
-# values with margin > 0 and later >= earlier + margin; the Maker's second-lock
-# cutoff must still outlast a Bitcoin confirmation (one block every two minutes).
+# demand on regtest; the LEZ deadlines are wall-clock). The Maker's second-lock
+# cutoff must outlast a Bitcoin confirmation (one block every two minutes), and
+# a Node refuses a profile whose refund delays, in blocks, break the order its
+# times promise. The first value is the delay when Bitcoin is the first lock,
+# the seventh when it is the second; the last two are seconds per block at the
+# fastest and slowest pace (the regtest miner keeps 120).
 # The last value is the LEZ discovery window in blocks: a Maker lock can only
 # appear before the cutoff, and a refund asserts its absence only once that
 # whole window is finalized, so the window must cover the cutoff (10 s slots on
@@ -222,14 +225,17 @@ timing_profile="${LEZ_TIMING_PROFILE:-$previous_timing_profile}"
 [[ -n "${LEZ_TIMING_PROFILE:-}" || -z "$timing_profile" ]] || echo "reusing existing timing profile ${timing_profile}"
 timing_profile="${timing_profile:-local}"
 case "$timing_profile" in
-  local) timing=(144 1800 3600 7200 300 360) ;;
-  fast)  timing=(6 600 900 1200 60 120) ;;
+  local) timing=(60 1800 3600 7200 300 360 33 120 120) ;;
+  fast)  timing=(15 600 900 1800 60 120 8 120 120) ;;
   *) echo "LEZ_TIMING_PROFILE must be local or fast" >&2; exit 1 ;;
 esac
 printf '%s\n' \
   "LEZ_VOLUME_PREFIX=$volume_prefix" \
   "LEZ_TIMING_PROFILE=$timing_profile" \
   "LEZ_BTC_REFUND_CSV_BLOCKS=${timing[0]}" \
+  "LEZ_BTC_SECOND_LOCK_REFUND_CSV_BLOCKS=${timing[6]}" \
+  "LEZ_BTC_BLOCK_SECONDS_FASTEST=${timing[7]}" \
+  "LEZ_BTC_BLOCK_SECONDS_SLOWEST=${timing[8]}" \
   "LEZ_BTC_MAKER_LOCK_CUTOFF_SECONDS=${timing[1]}" \
   "LEZ_BTC_EARLIER_REFUND_SECONDS=${timing[2]}" \
   "LEZ_BTC_LATER_REFUND_SECONDS=${timing[3]}" \

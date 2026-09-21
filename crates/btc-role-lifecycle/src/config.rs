@@ -12,7 +12,7 @@ use lez_bridge_protocol::{
     Hex32, Participant as BridgeParticipant, RuntimeCompatibility, RuntimeDescriptor,
 };
 use lez_btc_swap_sdk::{BtcChainPolicyV1, BtcLezChainIdentityV1};
-use lez_swap_core::Participant;
+use lez_swap_core::{Participant, SwapDirection};
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroizing;
 
@@ -74,11 +74,113 @@ pub struct BitcoinConfigV1 {
     /// Expected genesis block hash as Core displays it (`getblockhash 0`).
     pub genesis_block_hash: String,
     pub required_confirmations: u32,
+    /// Refund delay when Bitcoin is the first lock (the Taker's, the later refund).
     pub refund_csv_blocks: u32,
+    /// Refund delay when Bitcoin is the second lock (the Maker's, the earlier
+    /// refund). Absent, the first-lock delay serves both, which only a schedule
+    /// with a wide gap between its two refunds can carry.
+    #[serde(default)]
+    pub second_lock_refund_csv_blocks: Option<u32>,
+    /// The pace the chain is trusted to keep; the refund delays are blocks, the
+    /// schedule is seconds.
+    #[serde(default)]
+    pub block_seconds: BlockSecondsV1,
     /// Fee reserved between the contract value and the cooperative claim.
     pub claim_fee_sat: u64,
     #[serde(default)]
     pub lock_fee: LockFeePolicyV1,
+}
+
+/// Seconds per block at the fastest and the slowest pace the refund order must
+/// survive. Bitcoin aims at 600; testnet4 held 1,200 for days in September 2026.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct BlockSecondsV1 {
+    pub fastest: u64,
+    pub slowest: u64,
+}
+
+impl Default for BlockSecondsV1 {
+    fn default() -> Self {
+        Self {
+            fastest: 600,
+            slowest: 600,
+        }
+    }
+}
+
+impl BitcoinConfigV1 {
+    fn ensure_refund_delays(&self, recovery: &RecoveryPolicyV1) -> Result<()> {
+        ensure!(
+            self.refund_csv_blocks > 0 && self.second_lock_refund_csv_blocks != Some(0),
+            "refund delays must be nonzero"
+        );
+        ensure_refund_order(
+            self.refund_csv_blocks_for(SwapDirection::TakerSellsForeign),
+            self.refund_csv_blocks_for(SwapDirection::TakerSellsLez),
+            self.block_seconds,
+            recovery,
+        )
+    }
+
+    /// The refund delay of the Bitcoin lock in a swap of `direction`.
+    #[must_use]
+    pub fn refund_csv_blocks_for(&self, direction: SwapDirection) -> u32 {
+        match direction {
+            SwapDirection::TakerSellsForeign => self.refund_csv_blocks,
+            SwapDirection::TakerSellsLez => self
+                .second_lock_refund_csv_blocks
+                .unwrap_or(self.refund_csv_blocks),
+        }
+    }
+}
+
+/// Refuses a schedule whose Bitcoin refund delays, counted in blocks, do not
+/// keep the order its times, counted in seconds, promise.
+///
+/// A Bitcoin claim has no deadline on chain and the claimant holds the
+/// counterparty's half of its signature from the take, so only the refunds'
+/// order protects either side. Nothing checked it: with a 144-block delay and
+/// LEZ refunds at 6 and 9 hours, a Taker selling LEZ could have refunded its
+/// LEZ at 9 hours and still claimed the Maker's Bitcoin, whose refund matured a
+/// day later (public testnet, 2026-09-19).
+///
+/// # Errors
+///
+/// Names the rule the schedule breaks.
+pub fn ensure_refund_order(
+    first_lock_blocks: u32,
+    second_lock_blocks: u32,
+    BlockSecondsV1 { fastest, slowest }: BlockSecondsV1,
+    recovery: &RecoveryPolicyV1,
+) -> Result<()> {
+    ensure!(
+        fastest > 0 && fastest <= slowest,
+        "block_seconds must hold 0 < fastest <= slowest"
+    );
+    let margin = recovery.required_margin_seconds;
+    let (first, second) = (u64::from(first_lock_blocks), u64::from(second_lock_blocks));
+    // The first locker refunds last: the second locker needs until then to
+    // claim with the secret the first one revealed.
+    ensure!(
+        first * fastest >= recovery.later_refund_earliest_seconds,
+        "refund_csv_blocks: at {fastest} s a block the Taker's Bitcoin refund matures before the later refund time"
+    );
+    // The second locker's refund must not mature while the claim window is
+    // open: it could race a revealing claim and keep both assets.
+    ensure!(
+        second * fastest >= recovery.earlier_refund_latest_seconds + margin,
+        "second_lock_refund_csv_blocks: at {fastest} s a block the Maker's Bitcoin refund matures inside the claim window"
+    );
+    // And it must mature before the first locker's LEZ refund opens, however
+    // late the Maker locked and however slow the chain: after that the Taker
+    // could refund its LEZ and still claim the Bitcoin.
+    ensure!(
+        recovery.maker_second_lock_cutoff_seconds + second * slowest + margin
+            <= recovery.later_refund_earliest_seconds,
+        "second_lock_refund_csv_blocks: at {slowest} s a block the Maker's Bitcoin refund matures after the Taker's LEZ refund opens"
+    );
+    Ok(())
 }
 
 /// What a Bitcoin lock may pay in fees. The lock is the transaction the signed
@@ -248,10 +350,7 @@ impl BtcRoleRuntime {
                 && root.uid() == rustix::process::geteuid().as_raw(),
             "swaps_root must be an owner-private directory"
         );
-        ensure!(
-            config.bitcoin.refund_csv_blocks > 0,
-            "refund_csv_blocks must be nonzero"
-        );
+        config.bitcoin.ensure_refund_delays(&config.recovery)?;
         ensure!(
             config.bitcoin.lock_fee.confirmation_target > 0
                 && config.bitcoin.lock_fee.fallback_sat_per_vb > 0
@@ -427,7 +526,62 @@ fn ensure_networks_agree(
 
 #[cfg(test)]
 mod tests {
-    use super::LockFeePolicyV1;
+    use super::{BlockSecondsV1, LockFeePolicyV1, RecoveryPolicyV1, ensure_refund_order};
+
+    /// The public-testnet profile: cutoff 3 h, refunds at 6 h and 16 h.
+    const TESTNET: RecoveryPolicyV1 = RecoveryPolicyV1 {
+        maker_second_lock_cutoff_seconds: 10_800,
+        earlier_refund_latest_seconds: 21_600,
+        later_refund_earliest_seconds: 57_600,
+        required_margin_seconds: 600,
+    };
+    /// Bitcoin's target pace, and testnet4's in September 2026.
+    const PACE: BlockSecondsV1 = BlockSecondsV1 {
+        fastest: 600,
+        slowest: 1_200,
+    };
+
+    fn broken_rule(first: u32, second: u32, recovery: &RecoveryPolicyV1) -> String {
+        ensure_refund_order(first, second, PACE, recovery)
+            .expect_err("the schedule must be refused")
+            .to_string()
+    }
+
+    #[test]
+    fn a_schedule_that_keeps_the_refund_order_at_either_pace_is_accepted() {
+        ensure_refund_order(96, 37, PACE, &TESTNET).expect("96 and 37 blocks keep the order");
+    }
+
+    #[test]
+    fn the_makers_bitcoin_refund_must_mature_before_the_takers_lez_refund_opens() {
+        // What ran on the public testnet: 144 blocks against a 9-hour LEZ refund.
+        let nine_hours = RecoveryPolicyV1 {
+            later_refund_earliest_seconds: 32_400,
+            ..TESTNET
+        };
+        assert!(broken_rule(144, 144, &nine_hours).contains("after the Taker's LEZ refund opens"));
+        // One block too many for the 16-hour schedule at the slow pace.
+        assert!(broken_rule(96, 39, &TESTNET).contains("after the Taker's LEZ refund opens"));
+    }
+
+    #[test]
+    fn the_makers_bitcoin_refund_must_not_mature_inside_the_claim_window() {
+        assert!(broken_rule(96, 36, &TESTNET).contains("inside the claim window"));
+    }
+
+    #[test]
+    fn the_takers_bitcoin_refund_must_not_mature_before_the_later_refund_time() {
+        assert!(broken_rule(95, 37, &TESTNET).contains("before the later refund time"));
+    }
+
+    #[test]
+    fn a_pace_that_is_not_a_range_is_refused() {
+        let backwards = BlockSecondsV1 {
+            fastest: 1_200,
+            slowest: 600,
+        };
+        assert!(ensure_refund_order(96, 37, backwards, &TESTNET).is_err());
+    }
 
     #[test]
     fn lock_fee_rate_follows_the_estimate_between_the_relay_floor_and_the_cap() {
