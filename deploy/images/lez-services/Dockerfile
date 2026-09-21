@@ -2,8 +2,8 @@ FROM cgr.dev/chainguard/glibc-dynamic:latest@sha256:205572d5e48117e14b44b4262789
 
 LABEL org.logos-co.atomic-swaps.purpose="local-lez-v0.2-services"
 LABEL org.opencontainers.image.source="https://github.com/logos-blockchain/logos-execution-zone"
-LABEL org.opencontainers.image.version="v0.2.0"
-LABEL org.opencontainers.image.revision="a58fbce2ff48c58b7bb5001b1a27e64b9596ee3a"
+LABEL org.opencontainers.image.version="v0.2.4"
+LABEL org.opencontainers.image.revision="47eba256479f6f785acbd138834340703cd03401"
 LABEL org.opencontainers.image.licenses="MIT OR Apache-2.0"
 
 COPY --chmod=0555 sequencer_service /usr/local/bin/sequencer_service
