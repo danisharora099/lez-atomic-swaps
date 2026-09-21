@@ -21,9 +21,9 @@ FROM python:3.12-slim-bookworm
 
 LABEL org.logos-co.atomic-swaps.purpose="local-market-bootstrap-tools"
 
-# hadolint ignore=DL3008
 # libpcsclite1: the LEZ v0.2.4 wallet crates link it (keycard), so the identity
 # minter and the vault claim do not start without it.
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl jq libpcsclite1 socat \
     && rm -rf /var/lib/apt/lists/*
