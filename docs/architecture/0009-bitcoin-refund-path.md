@@ -66,5 +66,6 @@ pre-signed failure mode.
 Bitcoin Core tests cover the taproot commitment/control block, cooperative
 key-path claim, correct refund key, exact CSV lower boundary, early/wrong-key
 failure, reorged confirmation, realistic fee changes, replacement/child fee bump,
-and both trade directions. DLC adaptor-signature vectors and the third-party
-reviews remain independent release gates.
+and both trade directions. Gateway's proposed replacement suite uses official
+BIP-340/BIP-327 vectors and exact-pinned swap-specific adaptor fixtures; it
+remains pending Logos's GW-M3-001 disposition. Third-party reviews remain release gates.
