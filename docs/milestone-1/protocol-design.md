@@ -142,8 +142,8 @@ hidden guarantees.
   and [Fournier, *One-Time Verifiably Encrypted Signatures*](https://github.com/LLFourn/one-time-VES/blob/2ddc7ca7bc48c7a91b8a596e12a759a666a14deb/main.pdf);
   [ADR 0050](../architecture/0050-map-btc-adaptor-construction-to-security-properties.md)
   states how these properties are used and the limits of that mapping;
-  these are Gateway's proposed replacement sources under GW-M3-001, and Logos
-  acceptance of the substitution remains pending;
+  the test-reference correction GW-M3-001 was [accepted by Logos](https://github.com/logos-co/rfp/issues/123#issuecomment-5781178140)
+  on 22 September 2026; this does not approve M3 or the full security construction;
 - [h4sh3d paper](https://eprint.iacr.org/2020/1126) and pinned
   [COMIT reference](https://github.com/comit-network/xmr-btc-swap/commit/dc6ba84bbb1fe5ecc69581fec7dd8529567c4e32);
 - [BIP-199](https://bips.dev/199/) and
